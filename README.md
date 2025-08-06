@@ -4,14 +4,15 @@ This is fun side-project. I want to build *everything* from scratch. Here a few 
 
 ## Goals
 
-- [] C Compiler
-	This is the base of the whole project. I want to compile all subsequent projects using this compiler.
-- [] Text Editor
-	I want to use the text editor to build all the other projects. While I don't have it I'm going to write all the code using vim with no extensions.
-- [] Operating System
-	Once the text editor and the compiler are mature enough, I want to start work on an OS. I don't want to have a comercial one, but I want to be able to run it in actual hardware.
-- [] Shelll
-	This one kind of comes hand-in-hand with the OS, but it is its own beast, I want to do a lot of work on this one as well.
+- [ ] *C Lexer*: The lexer is going to be the lexer that is going to be used by the compiler, by the formatter, by the parser, we can use it for linters, etc.
+- [ ] *C Parser*: The Parser is going to be the basis of the compiler's frontend.
+- [ ] *C Preprocessor*: A preprocessor for the C language, so that we can plug into our C compiler to handle # statements
+- [ ] *C Code Formatter*: This is a dev tool, that will make my life significantly easier, since I won't need to format everything from scratch.
+- [ ] *C Compiler*: This is the base of the whole project. I want to compile all subsequent projects using this compiler.
+- [ ] *Build system*: Since currently I don't have a build system, I am using C itself in order to be able to compile stuff.
+- [ ] *Text Editor*: I want to use the text editor to build all the other projects. While I don't have it I'm going to write all the code using vim with no extensions.
+- [ ] *Operating System*: Once the text editor and the compiler are mature enough, I want to start work on an OS. I don't want to have a comercial one, but I want to be able to run it in actual hardware.
+- [ ] *Shelll*: This one kind of comes hand-in-hand with the OS, but it is its own beast, I want to do a lot of work on this one as well.
 
 ## Direction
 
