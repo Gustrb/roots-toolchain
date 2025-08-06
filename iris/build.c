@@ -36,12 +36,25 @@ static char *build_command_args =
         "./dist/iris.o "
         "-Wall "
         "-Wextra "
+	"-Werror "
+        "-pedantic";
+
+static char *build_tests_command_args =
+        "gcc "
+        "./test.c "
+        "-o "
+        "./dist/test "
+	"./dist/iris.o "
+        "-Wall "
+        "-Wextra "
+	"-Werror "
         "-pedantic";
 
 static int __refresh_date(void);
 static int __build_executable(void);
+static int __build_test(void);
 
-int main(void)
+int main(int argc, char **argv)
 {
         struct stat st = {0};
         LOG(LOG_LEVEL_INFO, "Checking if \"%s\" folder exists...\n", distfile);
@@ -67,8 +80,33 @@ int main(void)
                 return err;
         }
 
-
         LOG(LOG_LEVEL_INFO, "Finished building the app\n");
+
+	if (argc == 1) return 0;
+
+	const char *testarg = "--test";
+	size_t testarg_len  = strlen(testarg);
+
+	char test = 0;
+	for (int i = 1; i < argc; i++)
+	{
+		if (strncmp(argv[i], testarg, testarg_len) == 0)
+		{
+			test = 1;
+		}
+
+	}
+
+	if (test)
+	{
+		if ((err = __build_test()))
+		{
+			LOG(LOG_LEVEL_ERROR, "Failed to build executable at: \"%s\" exiting out...\n", build_tests_command_args);
+			return err;
+		}
+
+		LOG(LOG_LEVEL_INFO, "Finished building the tests\n");
+	}
 
         return 0;
 }
@@ -91,5 +129,13 @@ static int __build_executable(void)
         LOG(LOG_LEVEL_INFO, "Running %s to build the project\n", build_command_args);
         if (system(build_command_args)) return 1;
         return 0;
+}
+	
+static int __build_test(void)
+{
+        LOG(LOG_LEVEL_INFO, "Running %s to build the tests\n", build_tests_command_args);
+        if (system(build_tests_command_args)) return 1;
+        return 0;
+
 }
 
