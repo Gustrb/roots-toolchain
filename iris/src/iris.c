@@ -1,0 +1,4 @@
+void __hello(void)
+{
+}
+
