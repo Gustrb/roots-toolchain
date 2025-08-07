@@ -28,6 +28,7 @@ typedef enum
 {
 	STATE_INITIAL,
 	STATE_STRING_IDENTIFIER,
+	STATE_NUMBER_IDENTIFIER,
 } state_t;
 
 int lexer_next_token(lexer_t *l, token_t *t)
@@ -102,6 +103,48 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						return 0;
 					}; break;
 
+					case '=':
+					{
+						t->t = TOKEN_TYPE_EQUALS;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case '*':
+					{
+						t->t = TOKEN_TYPE_STAR;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case ';':
+					{
+						t->t = TOKEN_TYPE_SEMICOLON;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
 					case ' ': case '\n': case '\t':
 					{
 
@@ -113,6 +156,12 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						if (IS_ALPHABETIC(curr))
 						{
 							state = STATE_STRING_IDENTIFIER;
+							start = l->pos;
+							__lexer_advance(l, curr);
+						}
+						else if (IS_NUMERIC(curr))
+						{
+							state = STATE_NUMBER_IDENTIFIER;
 							start = l->pos;
 							__lexer_advance(l, curr);
 						}
@@ -139,6 +188,23 @@ int lexer_next_token(lexer_t *l, token_t *t)
 				t->end = l->pos;
 
 				t->t = __lexer_figure_out_if_it_is_keyword_or_identifier(l->data, t);
+				return 0;
+			}; break;
+
+			case STATE_NUMBER_IDENTIFIER:
+			{
+				t->line = l->line;
+				t->col = colstart;
+				t->start = start;
+
+				while (IS_NUMERIC(curr) && l->pos < l->data_len)
+				{
+					curr = __lexer_advance(l, curr);
+				}
+
+				t->end = l->pos;
+
+				t->t = TOKEN_TYPE_NUMERIC_LITERAL;
 				return 0;
 			}; break;
 
@@ -187,11 +253,31 @@ typedef enum
 	KL_STATE_V,
 	KL_STATE_VO,
 	KL_STATE_VOI,
+
+	KL_STATE_F,
+	KL_STATE_FL,
+	KL_STATE_FLO,
+	KL_STATE_FLOA,
+
+	KL_STATE_D,
+	KL_STATE_DO,
+	KL_STATE_DOU,
+	KL_STATE_DOUB,
+	KL_STATE_DOUBL,
+
+	KL_STATE_R,
+	KL_STATE_RE,
+	KL_STATE_RET,
+	KL_STATE_RETU,
+	KL_STATE_RETUR,
 } keyword_lex_state_t;
+
+#include <stdio.h>
 
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
 {
 	size_t pos = t->start;
+
 	keyword_lex_state_t state = KL_STATE_INITIAL; 
 
 	while (pos < t->end)
@@ -213,6 +299,24 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					case 'v':
 					{
 						state = KL_STATE_V;
+						pos++;
+					}; break;
+					
+					case 'f':
+					{
+						state = KL_STATE_F;
+						pos++;
+					}; break;
+
+					case 'd':
+					{
+						state = KL_STATE_D;
+						pos++;
+					}; break;
+					
+					case 'r':
+					{
+						state = KL_STATE_R;
 						pos++;
 					}; break;
 					
@@ -246,7 +350,10 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 				{
 					case 't':
 					{
-						return TOKEN_TYPE_INT;
+						if (pos == t->end-1)
+							return TOKEN_TYPE_INT;
+						state = KL_STATE_INITIAL;
+						pos++;
 					}; break;
 					default:
 					{
@@ -293,7 +400,10 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 				{
 					case 'd':
 					{
-						return TOKEN_TYPE_VOID;
+						if (pos == t->end-1)
+							return TOKEN_TYPE_VOID;
+						state = KL_STATE_INITIAL;
+						pos++;
 					}; break;
 					default:
 					{
@@ -301,6 +411,260 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					};
 				}
 			}; break;
+
+			case KL_STATE_F:
+			{
+				switch (c)
+				{
+					case 'l':
+					{
+						state = KL_STATE_FL;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_FL:
+			{
+				switch (c)
+				{
+					case 'o':
+					{
+						state = KL_STATE_FLO;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_FLO:
+			{
+				switch (c)
+				{
+					case 'a':
+					{
+						state = KL_STATE_FLOA;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_FLOA:
+			{
+				switch (c)
+				{
+					case 't':
+					{
+						if (pos == t->end-1)
+							return TOKEN_TYPE_FLOAT;
+						state = KL_STATE_INITIAL;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_D:
+			{
+				switch (c)
+				{
+					case 'o':
+					{
+						state = KL_STATE_DO;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_DO:
+			{
+				switch (c)
+				{
+					case 'u':
+					{
+						state = KL_STATE_DOU;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_DOU:
+			{
+				switch (c)
+				{
+					case 'b':
+					{
+						state = KL_STATE_DOUB;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_DOUB:
+			{
+				switch (c)
+				{
+					case 'l':
+					{
+						state = KL_STATE_DOUBL;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_DOUBL:
+			{
+				switch (c)
+				{
+					case 'e':
+					{
+						if (pos == t->end-1)
+							return TOKEN_TYPE_DOUBLE;
+						state = KL_STATE_INITIAL;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_R:
+			{
+				switch (c)
+				{
+					case 'e':
+					{
+						state = KL_STATE_RE;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RE:
+			{
+				switch (c)
+				{
+					case 't':
+					{
+						state = KL_STATE_RET;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RET:
+			{
+				switch (c)
+				{
+					case 'u':
+					{
+						state = KL_STATE_RETU;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RETU:
+			{
+				switch (c)
+				{
+					case 'r':
+					{
+						state = KL_STATE_RETUR;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RETUR:
+			{
+				switch (c)
+				{
+					case 'n':
+					{
+						if (pos == t->end-1)
+							return TOKEN_TYPE_RETURN;
+						state = KL_STATE_INITIAL;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+
+
+
+
+
+
+
+
+
 
 			default:
 			{

@@ -43,6 +43,7 @@ static char __tok_equal(const char *, token_t *e, token_t *g);
 
 static int __should_init_a_lexer(void);
 static int __should_be_able_to_lex_programs(void);
+static int __should_not_be_eager_to_find_tokens(void);
 
 int main(void)
 {
@@ -51,6 +52,7 @@ int main(void)
 	int err = 0;
 	err = err || __should_init_a_lexer();
 	err = err || __should_be_able_to_lex_programs();
+	err = err || __should_not_be_eager_to_find_tokens();
 	
 	if (!err)
 	{
@@ -140,6 +142,94 @@ static int __should_be_able_to_lex_programs(void)
 	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 16, 16, 0, 17, TOKEN_TYPE_RIGHT_BRACE, t);
 
 	SUCCESS("should_be_able_to_lex_programs");
+}
+
+static int __should_not_be_eager_to_find_tokens(void)
+{
+	START_CASE("should_not_be_eager_to_find_tokens");
+
+	int err;	
+	const char *sample_program = "float fn(double x) {\ndouble doubled = x*2;\n return doubled; \n}";
+	size_t sample_program_len = strlen(sample_program);
+
+	lexer_t lexer;
+	token_t t;
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 0, 5, 0, 1, TOKEN_TYPE_FLOAT, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 6, 8, 0, 6, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 8, 8, 0, 9, TOKEN_TYPE_LEFT_PAREN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 9, 15, 0, 10, TOKEN_TYPE_DOUBLE, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 16, 17, 0, 16, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 17, 17, 0, 18, TOKEN_TYPE_RIGHT_PAREN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 18, 19, 0, 20, TOKEN_TYPE_LEFT_BRACE, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 21, 27, 1, 21, TOKEN_TYPE_DOUBLE, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 28, 35, 1, 7, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 35, 36, 1, 16, TOKEN_TYPE_EQUALS, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 38, 39, 1, 17, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 39, 39, 1, 19, TOKEN_TYPE_STAR, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 40, 41, 1, 20, TOKEN_TYPE_NUMERIC_LITERAL, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 41, 41, 1, 21, TOKEN_TYPE_SEMICOLON, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 44, 50, 2, 22, TOKEN_TYPE_RETURN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 51, 58, 2, 8, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 58, 58, 2, 16, TOKEN_TYPE_SEMICOLON, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 59, 61, 3, 1, TOKEN_TYPE_RIGHT_BRACE, t);
+
+	SUCCESS("should_not_be_eager_to_find_tokens(");
 }
 
 static char __tok_equal(const char *suitename, token_t *e, token_t *g)
