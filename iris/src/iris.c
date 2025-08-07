@@ -187,6 +187,11 @@ typedef enum
 	KL_STATE_V,
 	KL_STATE_VO,
 	KL_STATE_VOI,
+
+	KL_STATE_F,
+	KL_STATE_FL,
+	KL_STATE_FLO,
+	KL_STATE_FLOA,
 } keyword_lex_state_t;
 
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
@@ -213,6 +218,12 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					case 'v':
 					{
 						state = KL_STATE_V;
+						pos++;
+					}; break;
+					
+					case 'f':
+					{
+						state = KL_STATE_F;
 						pos++;
 					}; break;
 					
@@ -294,6 +305,69 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					case 'd':
 					{
 						return TOKEN_TYPE_VOID;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_F:
+			{
+				switch (c)
+				{
+					case 'l':
+					{
+						state = KL_STATE_FL;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_FL:
+			{
+				switch (c)
+				{
+					case 'o':
+					{
+						state = KL_STATE_FLO;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_FLO:
+			{
+				switch (c)
+				{
+					case 'a':
+					{
+						state = KL_STATE_FLOA;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_FLOA:
+			{
+				switch (c)
+				{
+					case 't':
+					{
+						return TOKEN_TYPE_FLOAT;
 					}; break;
 					default:
 					{

@@ -148,18 +148,21 @@ static int __should_not_be_eager_to_find_tokens(void)
 {
 	START_CASE("should_not_be_eager_to_find_tokens");
 
-
 	int err;	
 	const char *sample_program = "float fn(double x) {\ndouble doubled = x*2;\n return doubled; \n}";
 	size_t sample_program_len = strlen(sample_program);
 
 	lexer_t lexer;
+	token_t t;
 	err = lexer_init(&lexer, sample_program, sample_program_len);
-	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to initialize a valid input");
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 0, 5, 0, 1, TOKEN_TYPE_FLOAT, t);
 
 	SUCCESS("should_not_be_eager_to_find_tokens(");
 }
-
 
 static char __tok_equal(const char *suitename, token_t *e, token_t *g)
 {
