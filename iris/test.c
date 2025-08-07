@@ -104,6 +104,17 @@ static int __should_be_able_to_lex_programs(void)
 
 	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 0, 0, 0, 1, TOKEN_TYPE_EOF, t);
 
+	const char *sample_program = "int main(void) {}";
+	size_t sample_program_len = strlen(sample_program);
+
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 0, 3, 0, 1, TOKEN_TYPE_INT, t);
+
 	SUCCESS("should_be_able_to_lex_programs");
 }
 
