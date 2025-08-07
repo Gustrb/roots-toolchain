@@ -131,6 +131,20 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						return 0;
 					}; break;
 
+					case ';':
+					{
+						t->t = TOKEN_TYPE_SEMICOLON;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
 					case ' ': case '\n': case '\t':
 					{
 
@@ -250,6 +264,12 @@ typedef enum
 	KL_STATE_DOU,
 	KL_STATE_DOUB,
 	KL_STATE_DOUBL,
+
+	KL_STATE_R,
+	KL_STATE_RE,
+	KL_STATE_RET,
+	KL_STATE_RETU,
+	KL_STATE_RETUR,
 } keyword_lex_state_t;
 
 #include <stdio.h>
@@ -291,6 +311,12 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					case 'd':
 					{
 						state = KL_STATE_D;
+						pos++;
+					}; break;
+					
+					case 'r':
+					{
+						state = KL_STATE_R;
 						pos++;
 					}; break;
 					
@@ -542,6 +568,103 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 
 				}
 			}; break;
+
+			case KL_STATE_R:
+			{
+				switch (c)
+				{
+					case 'e':
+					{
+						state = KL_STATE_RE;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RE:
+			{
+				switch (c)
+				{
+					case 't':
+					{
+						state = KL_STATE_RET;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RET:
+			{
+				switch (c)
+				{
+					case 'u':
+					{
+						state = KL_STATE_RETU;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RETU:
+			{
+				switch (c)
+				{
+					case 'r':
+					{
+						state = KL_STATE_RETUR;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_RETUR:
+			{
+				switch (c)
+				{
+					case 'n':
+					{
+						if (pos == t->end-1)
+							return TOKEN_TYPE_RETURN;
+						state = KL_STATE_INITIAL;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+
+
+
+
+
+
+
+
+
 
 			default:
 			{

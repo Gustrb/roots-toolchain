@@ -209,6 +209,14 @@ static int __should_not_be_eager_to_find_tokens(void)
 	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
 	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 40, 41, 1, 20, TOKEN_TYPE_NUMERIC_LITERAL, t);
 
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 41, 41, 1, 21, TOKEN_TYPE_SEMICOLON, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 44, 50, 2, 22, TOKEN_TYPE_RETURN, t);
+
 	SUCCESS("should_not_be_eager_to_find_tokens(");
 }
 
