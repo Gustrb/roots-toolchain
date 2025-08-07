@@ -1,8 +1,11 @@
 #include "../lib/iris.h"
 
 #define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z')
+#define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
+#define IS_ALPHANUMERIC(c) IS_ALPHABETIC(c) || IS_NUMERIC(c)
 
-void __lexer_advance(lexer_t *, char);
+static char __lexer_advance(lexer_t *, char);
+static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *, token_t *);
 
 // Here we don't really care if str is null-terminated or not.
 // we read from 0..len (non-inclusive) 
@@ -34,10 +37,13 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 	state_t state = STATE_INITIAL;
 
+
+	size_t start = l->pos;
+	size_t colstart = l->col;
+
 	while (l->pos < l->data_len)
 	{
 		char curr = l->data[l->pos];
-		size_t start = l->pos;
 
 		switch (state)
 		{
@@ -108,6 +114,7 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						if (IS_ALPHABETIC(curr))
 						{
 							state = STATE_STRING_IDENTIFIER;
+							start = l->pos;
 							__lexer_advance(l, curr);
 						}
 						else
@@ -121,7 +128,18 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 			case STATE_STRING_IDENTIFIER:
 			{
-				// TODO: Implement this shit
+				t->line = l->line;
+				t->col = colstart;
+				t->start = start;
+
+				while (IS_ALPHANUMERIC(curr) && l->pos < l->data_len)
+				{
+					curr = __lexer_advance(l, curr);
+				}
+
+				t->end = l->pos;
+				t->t = __lexer_figure_out_if_it_is_keyword_or_identifier(l->data, t);
+				return 0;
 			}; break;
 
 			default:
@@ -140,21 +158,106 @@ int lexer_next_token(lexer_t *l, token_t *t)
 	return 0;
 }
 
-void __lexer_advance(lexer_t *l, char c)
+static char __lexer_advance(lexer_t *l, char c)
 {
-	l->pos++;
+	char o = l->data[++l->pos];
 	if (c == '\n')
 	{
 		l->col = 1;
 		l->line++;
-		return;
+		return o;
 	}
 	if (c == '\t')
 	{
 		l->col +=4;
-		return;
+		return o;
 	}
 
 	l->col++;
+	return o;
+}
+
+typedef enum
+{
+	KL_STATE_INITIAL,	
+
+	KL_STATE_I,
+	KL_STATE_IN,
+
+	KL_STATE_V,
+} keyword_lex_state_t;
+
+static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
+{
+	size_t len = t->end - t->start;
+	size_t pos = t->start;
+	keyword_lex_state_t state = KL_STATE_INITIAL; 
+	
+	while (pos < len)
+	{
+		char c = stream[pos];
+
+		switch (state)
+		{
+			case KL_STATE_INITIAL:
+			{
+				switch (c)
+				{
+					case 'i':
+					{
+						state = KL_STATE_I;
+						pos++;
+					}; break;
+
+					case 'v':
+					{
+						state = KL_STATE_V;
+						pos++;
+					}; break;
+
+				}
+			}; break;
+
+			case KL_STATE_I:
+			{
+				switch (c)
+				{
+					case 'n':
+					{
+						state = KL_STATE_IN;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_IN:
+			{
+				switch (c)
+				{
+					case 't':
+					{
+						return TOKEN_TYPE_INT;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+	
+			
+			default:
+			{
+				// Unreachable, I guess
+				return TOKEN_TYPE_IDENTIFIER;
+			}; break;
+		}
+	}
+
+	return TOKEN_TYPE_IDENTIFIER;
 }
 
