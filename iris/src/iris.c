@@ -44,7 +44,6 @@ int lexer_next_token(lexer_t *l, token_t *t)
 	while (l->pos < l->data_len)
 	{
 		char curr = l->data[l->pos];
-
 		switch (state)
 		{
 			case STATE_INITIAL:
@@ -138,6 +137,7 @@ int lexer_next_token(lexer_t *l, token_t *t)
 				}
 
 				t->end = l->pos;
+
 				t->t = __lexer_figure_out_if_it_is_keyword_or_identifier(l->data, t);
 				return 0;
 			}; break;
@@ -185,15 +185,16 @@ typedef enum
 	KL_STATE_IN,
 
 	KL_STATE_V,
+	KL_STATE_VO,
+	KL_STATE_VOI,
 } keyword_lex_state_t;
 
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
 {
-	size_t len = t->end - t->start;
 	size_t pos = t->start;
 	keyword_lex_state_t state = KL_STATE_INITIAL; 
-	
-	while (pos < len)
+
+	while (pos < t->end)
 	{
 		char c = stream[pos];
 
@@ -213,6 +214,11 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					{
 						state = KL_STATE_V;
 						pos++;
+					}; break;
+					
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
 					}; break;
 
 				}
@@ -248,8 +254,54 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					};
 				}
 			}; break;
-	
-			
+
+			case KL_STATE_V:
+			{
+				switch (c)
+				{
+					case 'o':
+					{
+						state = KL_STATE_VO;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_VO:
+			{
+				switch (c)
+				{
+					case 'i':
+					{
+						state = KL_STATE_VOI;
+						pos++;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
+			case KL_STATE_VOI:
+			{
+				switch (c)
+				{
+					case 'd':
+					{
+						return TOKEN_TYPE_VOID;
+					}; break;
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+				}
+			}; break;
+
 			default:
 			{
 				// Unreachable, I guess
