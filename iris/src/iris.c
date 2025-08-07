@@ -28,6 +28,7 @@ typedef enum
 {
 	STATE_INITIAL,
 	STATE_STRING_IDENTIFIER,
+	STATE_NUMBER_IDENTIFIER,
 } state_t;
 
 int lexer_next_token(lexer_t *l, token_t *t)
@@ -102,6 +103,34 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						return 0;
 					}; break;
 
+					case '=':
+					{
+						t->t = TOKEN_TYPE_EQUALS;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case '*':
+					{
+						t->t = TOKEN_TYPE_STAR;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
 					case ' ': case '\n': case '\t':
 					{
 
@@ -113,6 +142,12 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						if (IS_ALPHABETIC(curr))
 						{
 							state = STATE_STRING_IDENTIFIER;
+							start = l->pos;
+							__lexer_advance(l, curr);
+						}
+						else if (IS_NUMERIC(curr))
+						{
+							state = STATE_NUMBER_IDENTIFIER;
 							start = l->pos;
 							__lexer_advance(l, curr);
 						}
@@ -139,6 +174,23 @@ int lexer_next_token(lexer_t *l, token_t *t)
 				t->end = l->pos;
 
 				t->t = __lexer_figure_out_if_it_is_keyword_or_identifier(l->data, t);
+				return 0;
+			}; break;
+
+			case STATE_NUMBER_IDENTIFIER:
+			{
+				t->line = l->line;
+				t->col = colstart;
+				t->start = start;
+
+				while (IS_NUMERIC(curr) && l->pos < l->data_len)
+				{
+					curr = __lexer_advance(l, curr);
+				}
+
+				t->end = l->pos;
+
+				t->t = TOKEN_TYPE_NUMERIC_LITERAL;
 				return 0;
 			}; break;
 
@@ -200,9 +252,12 @@ typedef enum
 	KL_STATE_DOUBL,
 } keyword_lex_state_t;
 
+#include <stdio.h>
+
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
 {
 	size_t pos = t->start;
+
 	keyword_lex_state_t state = KL_STATE_INITIAL; 
 
 	while (pos < t->end)
@@ -269,7 +324,10 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 				{
 					case 't':
 					{
-						return TOKEN_TYPE_INT;
+						if (pos == t->end-1)
+							return TOKEN_TYPE_INT;
+						state = KL_STATE_INITIAL;
+						pos++;
 					}; break;
 					default:
 					{
@@ -316,7 +374,10 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 				{
 					case 'd':
 					{
-						return TOKEN_TYPE_VOID;
+						if (pos == t->end-1)
+							return TOKEN_TYPE_VOID;
+						state = KL_STATE_INITIAL;
+						pos++;
 					}; break;
 					default:
 					{
@@ -379,7 +440,10 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 				{
 					case 't':
 					{
-						return TOKEN_TYPE_FLOAT;
+						if (pos == t->end-1)
+							return TOKEN_TYPE_FLOAT;
+						state = KL_STATE_INITIAL;
+						pos++;
 					}; break;
 					default:
 					{
@@ -438,7 +502,6 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					{
 						return TOKEN_TYPE_IDENTIFIER;
 					};
-
 				}
 			}; break;
 
@@ -466,7 +529,10 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 				{
 					case 'e':
 					{
-						return TOKEN_TYPE_DOUBLE;
+						if (pos == t->end-1)
+							return TOKEN_TYPE_DOUBLE;
+						state = KL_STATE_INITIAL;
+						pos++;
 					}; break;
 
 					default:
