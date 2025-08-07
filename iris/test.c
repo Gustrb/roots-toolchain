@@ -104,6 +104,41 @@ static int __should_be_able_to_lex_programs(void)
 
 	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 0, 0, 0, 1, TOKEN_TYPE_EOF, t);
 
+	const char *sample_program = "int main(void) {}";
+	size_t sample_program_len = strlen(sample_program);
+
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 0, 3, 0, 1, TOKEN_TYPE_INT, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 4, 8, 0, 4, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 8, 8, 0, 9, TOKEN_TYPE_LEFT_PAREN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 9, 13, 0, 10, TOKEN_TYPE_VOID, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 13, 13, 0, 14, TOKEN_TYPE_RIGHT_PAREN, t);
+
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 14, 15, 0, 16, TOKEN_TYPE_LEFT_BRACE, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 16, 16, 0, 17, TOKEN_TYPE_RIGHT_BRACE, t);
+
 	SUCCESS("should_be_able_to_lex_programs");
 }
 
