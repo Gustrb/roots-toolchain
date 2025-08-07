@@ -43,6 +43,7 @@ static char __tok_equal(const char *, token_t *e, token_t *g);
 
 static int __should_init_a_lexer(void);
 static int __should_be_able_to_lex_programs(void);
+static int __should_not_be_eager_to_find_tokens(void);
 
 int main(void)
 {
@@ -51,6 +52,7 @@ int main(void)
 	int err = 0;
 	err = err || __should_init_a_lexer();
 	err = err || __should_be_able_to_lex_programs();
+	err = err || __should_not_be_eager_to_find_tokens();
 	
 	if (!err)
 	{
@@ -141,6 +143,23 @@ static int __should_be_able_to_lex_programs(void)
 
 	SUCCESS("should_be_able_to_lex_programs");
 }
+
+static int __should_not_be_eager_to_find_tokens(void)
+{
+	START_CASE("should_not_be_eager_to_find_tokens");
+
+
+	int err;	
+	const char *sample_program = "float fn(double x) {\ndouble doubled = x*2;\n return doubled; \n}";
+	size_t sample_program_len = strlen(sample_program);
+
+	lexer_t lexer;
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to initialize a valid input");
+
+	SUCCESS("should_not_be_eager_to_find_tokens(");
+}
+
 
 static char __tok_equal(const char *suitename, token_t *e, token_t *g)
 {
