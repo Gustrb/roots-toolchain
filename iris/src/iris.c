@@ -192,6 +192,12 @@ typedef enum
 	KL_STATE_FL,
 	KL_STATE_FLO,
 	KL_STATE_FLOA,
+
+	KL_STATE_D,
+	KL_STATE_DO,
+	KL_STATE_DOU,
+	KL_STATE_DOUB,
+	KL_STATE_DOUBL,
 } keyword_lex_state_t;
 
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
@@ -224,6 +230,12 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					case 'f':
 					{
 						state = KL_STATE_F;
+						pos++;
+					}; break;
+
+					case 'd':
+					{
+						state = KL_STATE_D;
 						pos++;
 					}; break;
 					
@@ -373,6 +385,95 @@ static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char
 					{
 						return TOKEN_TYPE_IDENTIFIER;
 					};
+				}
+			}; break;
+
+			case KL_STATE_D:
+			{
+				switch (c)
+				{
+					case 'o':
+					{
+						state = KL_STATE_DO;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_DO:
+			{
+				switch (c)
+				{
+					case 'u':
+					{
+						state = KL_STATE_DOU;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_DOU:
+			{
+				switch (c)
+				{
+					case 'b':
+					{
+						state = KL_STATE_DOUB;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_DOUB:
+			{
+				switch (c)
+				{
+					case 'l':
+					{
+						state = KL_STATE_DOUBL;
+						pos++;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
+				}
+			}; break;
+
+			case KL_STATE_DOUBL:
+			{
+				switch (c)
+				{
+					case 'e':
+					{
+						return TOKEN_TYPE_DOUBLE;
+					}; break;
+
+					default:
+					{
+						return TOKEN_TYPE_IDENTIFIER;
+					};
+
 				}
 			}; break;
 
