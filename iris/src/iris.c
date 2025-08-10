@@ -1,4 +1,5 @@
 #include "../lib/iris.h"
+#include "../lib/log.h"
 
 #define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z')
 #define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
@@ -13,6 +14,7 @@ int lexer_init(lexer_t *lexer, const char *str, size_t len)
 {
 	if (lexer == NULL) return E_INVALIDPARAM;
 	if (str == NULL)   return E_INVALIDPARAM;
+// iris_log(LOG_LEVEL_DEBUG, "initializing lexer with params: %.*s", (int)len, str); 
 
 	lexer->data     = str;
 	lexer->data_len = len;
