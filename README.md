@@ -4,6 +4,9 @@ This is fun side-project. I want to build *everything* from scratch. Here a few 
 
 ## Goals
 
+
+- [ ] *Version Control System*: Currently, I am going to use git, I want to have my own.
+- [ ] *Project management software*: A system that I can use to manage projects, issues and tasks
 - [ ] *C Lexer*: The lexer is going to be the lexer that is going to be used by the compiler, by the formatter, by the parser, we can use it for linters, etc.
 - [ ] *C Parser*: The Parser is going to be the basis of the compiler's frontend.
 - [ ] *C Preprocessor*: A preprocessor for the C language, so that we can plug into our C compiler to handle # statements
