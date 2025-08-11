@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "../lib/iris.h"
 #include "../lib/log.h"
 
@@ -5,8 +7,62 @@
 #define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
 #define IS_ALPHANUMERIC(c) IS_ALPHABETIC(c) || IS_NUMERIC(c)
 
+#define __LEXER_NKEYWORDS 32
+
 static char __lexer_advance(lexer_t *, char);
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *, token_t *);
+static unsigned long long __hash(const char *, size_t, size_t);
+
+typedef struct 
+{
+	token_type_t t;
+	unsigned long long v;
+} keyword_pair_t;
+
+// sorted by value (hash)
+static const keyword_pair_t __keywords[__LEXER_NKEYWORDS] = {
+	{ .t = TOKEN_TYPE_EXTERN,       .v = 417800907370030071ull   },
+	{ .t = TOKEN_TYPE_DO,           .v = 617372513566700692ull   },
+	{ .t = TOKEN_TYPE_IF,           .v = 628023482707099174ull   },
+	{ .t = TOKEN_TYPE_REGISTER,     .v = 1390995973168426656ull  },
+	{ .t = TOKEN_TYPE_INT,          .v = 3143511548502526014ull  },
+	{ .t = TOKEN_TYPE_VOID,         .v = 3563412735833858527ull  },
+	{ .t = TOKEN_TYPE_UNION,        .v = 5416238596490301492ull  },
+	{ .t = TOKEN_TYPE_SIGNED,       .v = 5788750116080139093ull  },
+	{ .t = TOKEN_TYPE_AUTO,         .v = 6757501175350325814ull  },
+	{ .t = TOKEN_TYPE_CONST,        .v = 7334518323283222324ull  },
+	{ .t = TOKEN_TYPE_ELSE,         .v = 9163537027783908656ull  },
+	{ .t = TOKEN_TYPE_SIZEOF,       .v = 9964885110000857501ull  },
+	{ .t = TOKEN_TYPE_ENUM,         .v = 10474992716130377088ull },
+	{ .t = TOKEN_TYPE_BREAK,        .v = 10644074229358120504ull },
+	{ .t = TOKEN_TYPE_VOLATILE,     .v = 10769778583944859405ull },
+	{ .t = TOKEN_TYPE_GOTO,         .v = 11331286950270920518ull },
+	{ .t = TOKEN_TYPE_FLOAT,        .v = 11532138274943533413ull },
+	{ .t = TOKEN_TYPE_DOUBLE,       .v = 11567507311810436776ull },
+	{ .t = TOKEN_TYPE_SWITCH,       .v = 11936925801837197745ull },
+	{ .t = TOKEN_TYPE_CASE,         .v = 13068990443679199185ull },
+	{ .t = TOKEN_TYPE_UNSIGNED,     .v = 13236544317732455142ull },
+	{ .t = TOKEN_TYPE_STRUCT,       .v = 14058172984575203104ull },
+	{ .t = TOKEN_TYPE_STATIC,       .v = 14210125031242066299ull },
+	{ .t = TOKEN_TYPE_RETURN,       .v = 14251563519059995999ull },
+	{ .t = TOKEN_TYPE_LONG,         .v = 14837330719131395891ull },
+	{ .t = TOKEN_TYPE_WHILE,        .v = 14882043299657492846ull },
+	{ .t = TOKEN_TYPE_CONTINUE,     .v = 15186091406668687012ull },
+	{ .t = TOKEN_TYPE_FOR,          .v = 15902905282948881040ull },
+	{ .t = TOKEN_TYPE_TYPEDEF,      .v = 16509985740318510052ull },
+	{ .t = TOKEN_TYPE_DEFAULT,      .v = 16982411286042166782ull },
+	{ .t = TOKEN_TYPE_CHAR,         .v = 17483980429552467645ull },
+	{ .t = TOKEN_TYPE_SHORT,        .v = 17767075776831802709ull },
+};
+
+static const char *__keywords_str[__LEXER_NKEYWORDS] = {
+	"extern", "do", "if", "register", "int", "void",
+	"union", "signed", "auto", "const", "else", "sizeof",
+	"enum", "break", "volatile", "goto", "float",
+	"double", "switch", "case", "unsigned", "struct",
+	"static", "return", "long", "while", "continue",
+	"for", "typedef", "default", "char", "sort",
+};
 
 // Here we don't really care if str is null-terminated or not.
 // we read from 0..len (non-inclusive) 
@@ -14,7 +70,6 @@ int lexer_init(lexer_t *lexer, const char *str, size_t len)
 {
 	if (lexer == NULL) return E_INVALIDPARAM;
 	if (str == NULL)   return E_INVALIDPARAM;
-// iris_log(LOG_LEVEL_DEBUG, "initializing lexer with params: %.*s", (int)len, str); 
 
 	lexer->data     = str;
 	lexer->data_len = len;
@@ -245,437 +300,47 @@ static char __lexer_advance(lexer_t *l, char c)
 	return o;
 }
 
-typedef enum
-{
-	KL_STATE_INITIAL,	
-
-	KL_STATE_I,
-	KL_STATE_IN,
-
-	KL_STATE_V,
-	KL_STATE_VO,
-	KL_STATE_VOI,
-
-	KL_STATE_F,
-	KL_STATE_FL,
-	KL_STATE_FLO,
-	KL_STATE_FLOA,
-
-	KL_STATE_D,
-	KL_STATE_DO,
-	KL_STATE_DOU,
-	KL_STATE_DOUB,
-	KL_STATE_DOUBL,
-
-	KL_STATE_R,
-	KL_STATE_RE,
-	KL_STATE_RET,
-	KL_STATE_RETU,
-	KL_STATE_RETUR,
-} keyword_lex_state_t;
-
-#include <stdio.h>
-
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
 {
-	size_t pos = t->start;
+	unsigned long long h = __hash(stream, t->start, t->end);
 
-	keyword_lex_state_t state = KL_STATE_INITIAL; 
+	size_t low = 0;
+	size_t high = __LEXER_NKEYWORDS-1;
 
-	while (pos < t->end)
+	while (low <= high)
 	{
-		char c = stream[pos];
-
-		switch (state)
+		size_t i = (low+high)/2;
+		if (__keywords[i].v == h)
 		{
-			case KL_STATE_INITIAL:
+			size_t l = t->end-t->start;
+			if (l == strlen(__keywords_str[i]))
 			{
-				switch (c)
-				{
-					case 'i':
-					{
-						state = KL_STATE_I;
-						pos++;
-					}; break;
-
-					case 'v':
-					{
-						state = KL_STATE_V;
-						pos++;
-					}; break;
-					
-					case 'f':
-					{
-						state = KL_STATE_F;
-						pos++;
-					}; break;
-
-					case 'd':
-					{
-						state = KL_STATE_D;
-						pos++;
-					}; break;
-					
-					case 'r':
-					{
-						state = KL_STATE_R;
-						pos++;
-					}; break;
-					
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					}; break;
-
-				}
-			}; break;
-
-			case KL_STATE_I:
-			{
-				switch (c)
-				{
-					case 'n':
-					{
-						state = KL_STATE_IN;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_IN:
-			{
-				switch (c)
-				{
-					case 't':
-					{
-						if (pos == t->end-1)
-							return TOKEN_TYPE_INT;
-						state = KL_STATE_INITIAL;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_V:
-			{
-				switch (c)
-				{
-					case 'o':
-					{
-						state = KL_STATE_VO;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_VO:
-			{
-				switch (c)
-				{
-					case 'i':
-					{
-						state = KL_STATE_VOI;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_VOI:
-			{
-				switch (c)
-				{
-					case 'd':
-					{
-						if (pos == t->end-1)
-							return TOKEN_TYPE_VOID;
-						state = KL_STATE_INITIAL;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_F:
-			{
-				switch (c)
-				{
-					case 'l':
-					{
-						state = KL_STATE_FL;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_FL:
-			{
-				switch (c)
-				{
-					case 'o':
-					{
-						state = KL_STATE_FLO;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_FLO:
-			{
-				switch (c)
-				{
-					case 'a':
-					{
-						state = KL_STATE_FLOA;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_FLOA:
-			{
-				switch (c)
-				{
-					case 't':
-					{
-						if (pos == t->end-1)
-							return TOKEN_TYPE_FLOAT;
-						state = KL_STATE_INITIAL;
-						pos++;
-					}; break;
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_D:
-			{
-				switch (c)
-				{
-					case 'o':
-					{
-						state = KL_STATE_DO;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-
-				}
-			}; break;
-
-			case KL_STATE_DO:
-			{
-				switch (c)
-				{
-					case 'u':
-					{
-						state = KL_STATE_DOU;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-
-				}
-			}; break;
-
-			case KL_STATE_DOU:
-			{
-				switch (c)
-				{
-					case 'b':
-					{
-						state = KL_STATE_DOUB;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_DOUB:
-			{
-				switch (c)
-				{
-					case 'l':
-					{
-						state = KL_STATE_DOUBL;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-
-				}
-			}; break;
-
-			case KL_STATE_DOUBL:
-			{
-				switch (c)
-				{
-					case 'e':
-					{
-						if (pos == t->end-1)
-							return TOKEN_TYPE_DOUBLE;
-						state = KL_STATE_INITIAL;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-
-				}
-			}; break;
-
-			case KL_STATE_R:
-			{
-				switch (c)
-				{
-					case 'e':
-					{
-						state = KL_STATE_RE;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_RE:
-			{
-				switch (c)
-				{
-					case 't':
-					{
-						state = KL_STATE_RET;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_RET:
-			{
-				switch (c)
-				{
-					case 'u':
-					{
-						state = KL_STATE_RETU;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_RETU:
-			{
-				switch (c)
-				{
-					case 'r':
-					{
-						state = KL_STATE_RETUR;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-			case KL_STATE_RETUR:
-			{
-				switch (c)
-				{
-					case 'n':
-					{
-						if (pos == t->end-1)
-							return TOKEN_TYPE_RETURN;
-						state = KL_STATE_INITIAL;
-						pos++;
-					}; break;
-
-					default:
-					{
-						return TOKEN_TYPE_IDENTIFIER;
-					};
-				}
-			}; break;
-
-
-
-
-
-
-
-
-
-
-
-			default:
-			{
-				// Unreachable, I guess
-				return TOKEN_TYPE_IDENTIFIER;
-			}; break;
+				return __keywords[i].t;
+			}
+			return TOKEN_TYPE_IDENTIFIER;
+		}
+		else if (__keywords[i].v < h)
+		{
+			low = i+1;
+		}
+		else
+		{
+			if (i == 0) break;
+			high = i-1;
 		}
 	}
 
 	return TOKEN_TYPE_IDENTIFIER;
+}
+
+static unsigned long long __hash(const char *d, size_t f, size_t l)
+{
+	unsigned long long o = 0xcbf29ce484222325ULL;
+	for (size_t i = f; i < l; ++i)
+	{
+		o = (o ^ d[i]) * 0x100000001b3ULL;
+	}
+
+	return o;
 }
 
