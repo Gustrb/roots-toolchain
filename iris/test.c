@@ -229,7 +229,7 @@ static int __should_not_be_eager_to_find_tokens(void)
 	ASSERT_EQ(0, err, "should_not_be_eager_to_find_tokens", "should succeed to lex a valid program");
 	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 59, 61, 3, 1, TOKEN_TYPE_RIGHT_BRACE, t);
 
-	SUCCESS("should_not_be_eager_to_find_tokens(");
+	SUCCESS("should_not_be_eager_to_find_tokens");
 }
 
 static char __tok_equal(const char *suitename, token_t *e, token_t *g)
