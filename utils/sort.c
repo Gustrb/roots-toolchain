@@ -41,7 +41,7 @@ void __str_to_ull(const char *in, size_t inlen, int ni)
 
 int __partition(int low, int high)
 {
-	int p = nums[low];
+	unsigned long long p = nums[low];
 	int i = low;
 	int j = high;
 	while (i < j)
@@ -51,7 +51,7 @@ int __partition(int low, int high)
 			i++;
 		}
 
-		while (nums[j] > p && j >= low + 1) {
+		while (nums[j] >= p && j >= low + 1) {
 			j--;
 		}
 		if (i < j)
