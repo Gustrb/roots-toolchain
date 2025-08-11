@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define E_INVALIDCAST 2
+
 unsigned long long nums[1024];
 
-void __str_to_ull(const char *in, size_t, int i);
+int __str_to_ull(const char *in, size_t, int i);
 void __qsort(int, int);
 
 int main(int argc, const char **argv)
@@ -13,7 +15,12 @@ int main(int argc, const char **argv)
 
 	for (int i = 0; i < argc-1; ++i)
 	{
-		__str_to_ull(argv[i+1], strlen(argv[i+1]), i);
+		int err = __str_to_ull(argv[i+1], strlen(argv[i+1]), i);
+		if (err)
+		{
+			fprintf(stderr, "Failed converting: %s to unsigned long long\n", argv[i+1]);
+			return err;
+		}
 	}
 	
 	__qsort(0, argc-2);
@@ -27,16 +34,20 @@ int main(int argc, const char **argv)
 	return 0;
 }
 
-void __str_to_ull(const char *in, size_t inlen, int ni)
+int __str_to_ull(const char *in, size_t inlen, int ni)
 {
 	unsigned long long acc = 0;
 	nums[ni] = 0;
 
 	for (int i = 0; i < (int)inlen; ++i)
 	{
-		acc = acc * 10 + (in[i] - '0');
+		char b = in[i];
+		if (!((b >= '0') && (b <= '9'))) return E_INVALIDCAST;
+		acc = acc * 10 + (b - '0');
 	}
 	nums[ni] = acc;
+
+	return 0;
 }
 
 int __partition(int low, int high)
@@ -68,7 +79,6 @@ int __partition(int low, int high)
 	return j;
 }
 
-// TODO: Debug this, it is not sorting correctly
 void __qsort(int low, int high)
 {
 	if (low < high)
