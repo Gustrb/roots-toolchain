@@ -46,6 +46,7 @@ static int __should_be_able_to_lex_programs(void);
 static int __should_not_be_eager_to_find_tokens(void);
 static int __should_be_able_to_lex_string_literals(void);
 static int __should_not_be_able_to_lex_unterminated_strings(void);
+static int __should_be_able_to_lex_char_literals(void);
 
 int main(void)
 {
@@ -57,6 +58,7 @@ int main(void)
 	err = err || __should_not_be_eager_to_find_tokens();
 	err = err || __should_be_able_to_lex_string_literals();
 	err = err || __should_not_be_able_to_lex_unterminated_strings();
+	err = err || __should_be_able_to_lex_char_literals();
 	
 	if (!err)
 	{
@@ -326,6 +328,27 @@ static int __should_not_be_able_to_lex_unterminated_strings(void)
 	ASSERT_EQ(E_UNTERMINATEDSTRINGLITERAL, err, "should_not_be_able_to_lex_unterminated_strings", "should succeed to lex a valid program");
 
 	SUCCESS("should_not_be_able_to_lex_unterminated_strings")
+}
+
+static int __should_be_able_to_lex_char_literals(void)
+{
+
+	START_CASE("should_be_able_to_lex_char_literals");
+
+	int err;	
+	const char *sample_program = "'c'";
+	size_t sample_program_len = strlen(sample_program);
+
+	lexer_t lexer;
+	token_t t;
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_char_literals", 0, 3, 0, 1, TOKEN_TYPE_CHAR_LITERAL, t);
+
+	SUCCESS("should_be_able_to_lex_char_literals");
 }
 
 static char __tok_equal(const char *suitename, token_t *e, token_t *g)

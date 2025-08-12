@@ -87,6 +87,7 @@ typedef enum
 	STATE_STRING_IDENTIFIER,
 	STATE_NUMBER_IDENTIFIER,
 	STATE_STRING_LITERAL,
+	STATE_CHAR_LITERAL,
 } state_t;
 
 int lexer_next_token(lexer_t *l, token_t *t)
@@ -210,6 +211,13 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						__lexer_advance(l, curr);
 					}; break;
 
+					case '\'':
+					{
+						state = STATE_CHAR_LITERAL;
+						start = l->pos;
+						__lexer_advance(l, curr);
+					}; break;
+
 					case ' ': case '\n': case '\t':
 					{
 
@@ -264,6 +272,25 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 				t->end = l->pos;
 				t->t = TOKEN_TYPE_STRING_LITERAL;
+				return 0;
+			}; break;
+
+			case STATE_CHAR_LITERAL:
+			{
+				t->line = l->line;
+				t->col = colstart;
+				t->start = start;
+
+				if (curr == '\n' || l->pos >= l->data_len) return E_UNTERMINATEDCHARLITERAL;
+
+				curr = __lexer_advance(l, curr);
+
+				if (curr != '\'') return E_CHARLITERALTOOBIG;
+
+				curr = __lexer_advance(l, curr);
+
+				t->end = l->pos;
+				t->t = TOKEN_TYPE_CHAR_LITERAL;
 				return 0;
 			}; break;
 
