@@ -89,8 +89,6 @@ typedef enum
 	STATE_STRING_LITERAL,
 } state_t;
 
-#include <stdio.h>
-
 int lexer_next_token(lexer_t *l, token_t *t)
 {
 	if (l == NULL) return E_INVALIDPARAM;
