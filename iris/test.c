@@ -44,6 +44,7 @@ static char __tok_equal(const char *, token_t *e, token_t *g);
 static int __should_init_a_lexer(void);
 static int __should_be_able_to_lex_programs(void);
 static int __should_not_be_eager_to_find_tokens(void);
+static int __should_be_able_to_lex_string_literals(void);
 
 int main(void)
 {
@@ -53,6 +54,7 @@ int main(void)
 	err = err || __should_init_a_lexer();
 	err = err || __should_be_able_to_lex_programs();
 	err = err || __should_not_be_eager_to_find_tokens();
+	err = err || __should_be_able_to_lex_string_literals();
 	
 	if (!err)
 	{
@@ -131,7 +133,6 @@ static int __should_be_able_to_lex_programs(void)
 	err = lexer_next_token(&lexer, &t);
 	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
 	ASSERT_TOKEN_EQ("should_be_able_to_lex_programs", 13, 13, 0, 14, TOKEN_TYPE_RIGHT_PAREN, t);
-
 
 	err = lexer_next_token(&lexer, &t);
 	ASSERT_EQ(0, err, "should_be_able_to_lex_programs", "should succeed to lex a valid program");
@@ -230,6 +231,71 @@ static int __should_not_be_eager_to_find_tokens(void)
 	ASSERT_TOKEN_EQ("should_not_be_eager_to_find_tokens", 59, 61, 3, 1, TOKEN_TYPE_RIGHT_BRACE, t);
 
 	SUCCESS("should_not_be_eager_to_find_tokens");
+}
+
+static int __should_be_able_to_lex_string_literals(void)
+{
+
+	START_CASE("should_be_able_to_lex_string_literals");
+
+	int err;	
+	const char *sample_program = "int main(void) {\nprintf(\"hello, world\");\n }";
+	size_t sample_program_len = strlen(sample_program);
+
+	lexer_t lexer;
+	token_t t;
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to-lex_string_literals", 0, 3, 0, 1, TOKEN_TYPE_INT, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 4, 8, 0, 4, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 8, 8, 0, 9, TOKEN_TYPE_LEFT_PAREN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 9, 13, 0, 10, TOKEN_TYPE_VOID, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 13, 13, 0, 14, TOKEN_TYPE_RIGHT_PAREN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 14, 15, 0, 16, TOKEN_TYPE_LEFT_BRACE, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 17, 23, 1, 17, TOKEN_TYPE_IDENTIFIER, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 23, 23, 1, 7, TOKEN_TYPE_LEFT_PAREN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 24, 38, 1, 8, TOKEN_TYPE_STRING_LITERAL, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 38, 38, 1, 22, TOKEN_TYPE_RIGHT_PAREN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 39, 39, 1, 23, TOKEN_TYPE_SEMICOLON, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_string_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 40, 42, 2, 2, TOKEN_TYPE_RIGHT_BRACE, t);
+
+	SUCCESS("should_be_able_to_lex_string_literals");
 }
 
 static char __tok_equal(const char *suitename, token_t *e, token_t *g)

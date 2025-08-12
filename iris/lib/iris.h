@@ -50,7 +50,7 @@ typedef enum
 
 	TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_EOF,
 
-	TOKEN_TYPE_SINGLEQUOTE, TOKEN_TYPE_DOUBLEQUOTE,
+	TOKEN_TYPE_STRING_LITERAL, TOKEN_TYPE_CHAR_LITERAL,
 	TOKEN_TYPE_NUMERIC_LITERAL, TOKEN_TYPE_FLOAT_LITERAL,
 } token_type_t;
 
@@ -71,6 +71,7 @@ int lexer_init(lexer_t *, const char *, size_t);
 
 #define E_INVALIDTOKEN 2
 #define E_INVALIDSTATE 3
+#define E_UNTERMINATEDSTRINGLITERAL 4
 
 int lexer_next_token(lexer_t *, token_t *);
 
