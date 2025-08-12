@@ -8,12 +8,12 @@
 
 #define E_FAILSTRTIME    1
 #define E_FAILDISTCREATE 2
-#define E_OUTOFMEM       3
+#define E_BUFFEROVERFLOW 999
 
 #define LOG_LEVEL_INFO  0
 #define LOG_LEVEL_ERROR 1
 
-static char datebuf[64] = {0};
+#define __COMMAND_BUFFER_SIZE 4096
 
 #define LOG(level, ...) \
         do { \
@@ -26,55 +26,19 @@ static char datebuf[64] = {0};
                 } \
         } while(0); \
 
+#define __C_APPEND(c, str) \
+	do \
+		if ((err = command_append_arg(&c, str))) return err;\
+	while (0);
+
+typedef struct
+{
+	char buff[__COMMAND_BUFFER_SIZE];
+	size_t last;
+} command_t;
+
 static const char *distfile = "dist";
 static const char *executable_path = "./src/iris.c";
-
-static char *build_loglib_args =
-	"gcc "
-	"-c "
-        "./src/log.c "
-        "-o "
-        "./dist/log.o "
-        "-Wall "
-        "-Wextra "
-	"-Werror "
-        "-pedantic";
-
-static char *build_command_args =
-        "gcc "
-	"-c "
-        "./src/iris.c "
-        "-o "
-        "./dist/iris.o "
-        "-Wall "
-        "-Wextra "
-	"-Werror "
-        "-pedantic";
-
-static char *build_test_lib_command_args =
-        "gcc "
-	"-c "
-        "./test/lib.c "
-        "-o "
-        "./dist/testlib.o "
-        "-Wall "
-        "-Wextra "
-	"-Werror "
-        "-pedantic";
-
-static char *build_tests_command_args =
-        "gcc "
-        "./test/unittest.c "
-        "-o "
-        "./dist/unittest "
-	"./dist/iris.o "
-	"./dist/log.o "
-	"./dist/testlib.o "
-        "-Wall "
-        "-Wextra "
-	"-Werror "
-        "-pedantic";
-
 static const char *testarg = "--test";
 static const char *debugarg = "--debug";
 static const char *debugflag = " -DDEBUG ";
@@ -83,6 +47,11 @@ static int __refresh_date(void);
 static int __build_executable(char debug);
 static int __build_loglib(char debug);
 static int __build_test(char debug);
+
+static int command_append_arg(command_t *c, const char *arg);
+static int command_run(command_t *c); 
+
+static char datebuf[64] = {0};
 
 int main(int argc, char **argv)
 {
@@ -141,7 +110,7 @@ int main(int argc, char **argv)
 	{
 		if ((err = __build_test(debug)))
 		{
-			LOG(LOG_LEVEL_ERROR, "Failed to build executable at: \"%s\" exiting out...\n", build_tests_command_args);
+			LOG(LOG_LEVEL_ERROR, "Failed to build test executable at exiting out...\n");
 			return err;
 		}
 
@@ -166,111 +135,89 @@ static int __refresh_date(void)
 
 static int __build_executable(char debug)
 {
-	size_t l = strlen(build_command_args);
-	size_t stoalloc = l + 1;
-	if (debug)
-	{
-		stoalloc += strlen(debugflag);
-	}
+	int err;
+	command_t c = {0};
 
-	char *buff = malloc(stoalloc);
-	if (buff == NULL)
-	{
-		return E_OUTOFMEM;
-	}
-
-	size_t i = 0;
-	for (i = 0; i < l; ++i)
-	{
-		buff[i] = build_command_args[i];
-	}
+	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "-c ");
+	__C_APPEND(c, "./src/iris.c ");
+	__C_APPEND(c, "-o ");
+	__C_APPEND(c, "./dist/iris.o ");
+	__C_APPEND(c, "-Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
 
 	if (debug)
 	{
-		for (size_t j = 0; j < strlen(debugflag); ++j)
-		{
-			buff[i++] = debugflag[j];
-		}
+		__C_APPEND(c, debugflag);
 	}
 
-	buff[i] = '\0';
+	if ((err = command_run(&c)))
+	{
+		return err;
+	}
 
-        LOG(LOG_LEVEL_INFO, "Running %s to build the project\n", buff);
-        if (system(buff)) return 1;
+        LOG(LOG_LEVEL_INFO, "Running %s to build the project\n", c.buff);
         return 0;
 }
 
 static int __build_loglib(char debug)
 {
-	size_t l = strlen(build_loglib_args);
-	size_t stoalloc = l + 1;
-	if (debug)
-	{
-		stoalloc += strlen(debugflag);
-	}
+	int err;
+	command_t c = {0};
 
-	char *buff = malloc(stoalloc);
-	if (buff == NULL)
-	{
-		return E_OUTOFMEM;
-	}
-
-	size_t i = 0;
-	for (i = 0; i < l; ++i)
-	{
-		buff[i] = build_loglib_args[i];
-	}
+	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "-c ");
+	__C_APPEND(c, "./src/log.c ");
+	__C_APPEND(c, "-o ");
+	__C_APPEND(c, "./dist/log.o ");
+	__C_APPEND(c, "-Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
 
 	if (debug)
 	{
-		for (size_t j = 0; j < strlen(debugflag); ++j)
-		{
-			buff[i++] = debugflag[j];
-		}
+		__C_APPEND(c, debugflag);
 	}
 
-	buff[i] = '\0';
+	if ((err = command_run(&c)))
+	{
+		return err;
+	}
 
-        LOG(LOG_LEVEL_INFO, "Running %s to build the log library\n", buff);
-        if (system(buff)) return 1;
+        LOG(LOG_LEVEL_INFO, "Running %s to build the log library\n", c.buff);
         return 0;
 }
 
 static int __build_test_lib(char debug)
 {
-	size_t l = strlen(build_test_lib_command_args);
-	size_t stoalloc = l + 1;
-	if (debug)
-	{
-		stoalloc += strlen(debugflag);
-	}
+	int err;
+	command_t c = {0};
 
-	char *buff = malloc(stoalloc);
-	if (buff == NULL)
-	{
-		return E_OUTOFMEM;
-	}
-
-	size_t i = 0;
-	for (i = 0; i < l; ++i)
-	{
-		buff[i] = build_test_lib_command_args[i];
-	}
+	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "-c ");
+	__C_APPEND(c, "./test/lib.c ");
+	__C_APPEND(c, "-o ");
+	__C_APPEND(c, "./dist/testlib.o ");
+	__C_APPEND(c, "-Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
 
 	if (debug)
 	{
-		for (size_t j = 0; j < strlen(debugflag); ++j)
-		{
-			buff[i++] = debugflag[j];
-		}
+		__C_APPEND(c, debugflag);
 	}
 
-	buff[i] = '\0';
+	if ((err = command_run(&c)))
+	{
+		return err;
+	}
 
-        LOG(LOG_LEVEL_INFO, "Running %s to build the test lib\n", buff);
-        if (system(buff)) return 1;
+        LOG(LOG_LEVEL_INFO, "Running %s to build the test lib\n", c.buff);
 
-	free(buff);
         return 0;
 }
 
@@ -282,39 +229,62 @@ static int __build_test(char debug)
 		return err;
 	}
 
-	size_t l = strlen(build_tests_command_args);
-	size_t stoalloc = l + 1;
-	if (debug)
-	{
-		stoalloc += strlen(debugflag);
-	}
+	command_t c = {0};
 
-	char *buff = malloc(stoalloc);
-	if (buff == NULL)
-	{
-		return E_OUTOFMEM;
-	}
-
-	size_t i = 0;
-	for (i = 0; i < l; ++i)
-	{
-		buff[i] = build_tests_command_args[i];
-	}
+	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "./test/unittest.c ");
+	__C_APPEND(c, "-o ");
+	__C_APPEND(c, "./dist/unittest ");
+	__C_APPEND(c, "./dist/iris.o ");
+	__C_APPEND(c, "./dist/log.o ");
+	__C_APPEND(c, "./dist/testlib.o ");
+	__C_APPEND(c, "-Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
 
 	if (debug)
 	{
-		for (size_t j = 0; j < strlen(debugflag); ++j)
-		{
-			buff[i++] = debugflag[j];
-		}
+		__C_APPEND(c, debugflag);
 	}
 
-	buff[i] = '\0';
+	if ((err = command_run(&c)))
+	{
+		return err;
+	}
 
-        LOG(LOG_LEVEL_INFO, "Running %s to build the tests\n", buff);
-        if (system(buff)) return 1;
-
-	free(buff);
+        LOG(LOG_LEVEL_INFO, "Running %s to build the tests\n", c.buff);
         return 0;
 }
+
+static int command_append_arg(command_t *c, const char *arg)
+{
+	size_t len = strlen(arg);
+	// We want to keep the invariant of
+	// c->last < __COMMAND_BUFFER_SIZE - 1
+	// Because that is where we are going to put the null byte
+	if (c->last + len > __COMMAND_BUFFER_SIZE-1)
+	{
+		return E_BUFFEROVERFLOW;
+	}
+
+	for (size_t i = 0; i < len; ++i)
+	{
+		c->buff[c->last++] = arg[i];
+	}
+
+	return 0;
+}
+
+
+static int command_run(command_t *c)
+{
+	if (c->last > __COMMAND_BUFFER_SIZE)
+	{
+		return E_BUFFEROVERFLOW;
+	}
+
+	c->buff[c->last] = '\0';
+	return system(c->buff);
+} 
 
