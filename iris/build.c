@@ -39,14 +39,19 @@ typedef struct
 
 static const char *distfile = "dist";
 static const char *executable_path = "./src/iris.c";
+
 static const char *testarg = "--test";
+static const char *testfixturearg = "--test-fixtures";
 static const char *debugarg = "--debug";
+
 static const char *debugflag = " -DDEBUG ";
 
 static int __refresh_date(void);
+
 static int __build_executable(char debug);
 static int __build_loglib(char debug);
 static int __build_test(char debug);
+static int __build_test_fixtures(char debug);
 
 static int command_append_arg(command_t *c, const char *arg);
 static int command_run(command_t *c); 
@@ -55,21 +60,26 @@ static char datebuf[64] = {0};
 
 int main(int argc, char **argv)
 {
-	char test  = 0;
-	char debug = 0;
+	char test        = 0;
+	char debug       = 0;
+	char testfixture = 0;
 
 	// parsing args
 	if (argc > 1)
 	{
 		for (int i = 1; i < argc; i++)
 		{
-			if (strncmp(argv[i], testarg, strlen(testarg)) == 0)
-			{
-				test = 1;
-			}
-			else if (strncmp(argv[i], debugarg, strlen(debugarg)) == 0)
+			if (strncmp(argv[i], debugarg, strlen(debugarg)) == 0)
 			{
 				debug = 1;
+			}
+			else if (strncmp(argv[i], testfixturearg, strlen(testfixturearg)) == 0)
+			{
+				testfixture = 1;
+			}
+			else if (strncmp(argv[i], testarg, strlen(testarg)) == 0)
+			{
+				test = 1;
 			}
 
 		}
@@ -110,11 +120,22 @@ int main(int argc, char **argv)
 	{
 		if ((err = __build_test(debug)))
 		{
-			LOG(LOG_LEVEL_ERROR, "Failed to build test executable at exiting out...\n");
+			LOG(LOG_LEVEL_ERROR, "Failed to build test executable exiting out...\n");
 			return err;
 		}
 
 		LOG(LOG_LEVEL_INFO, "Finished building the tests\n");
+	}
+
+	if (testfixture)
+	{
+		if ((err = __build_test_fixtures(debug)))
+		{
+			LOG(LOG_LEVEL_ERROR, "Failed to build test fixtures executables exiting out...\n");
+			return err;
+		}
+
+		LOG(LOG_LEVEL_INFO, "Finished building the test fixtures\n");
 	}
 
         return 0;
@@ -255,6 +276,51 @@ static int __build_test(char debug)
 
         LOG(LOG_LEVEL_INFO, "Running %s to build the tests\n", c.buff);
         return 0;
+}
+
+#define __FIXTURES_N 1
+
+static const char *fixturepaths[__FIXTURES_N] = {
+	"./test/00-fib.c ",
+};
+
+static const char *fixture_outputs[__FIXTURES_N] = {
+	"./dist/00-fib ",
+};
+
+static int __build_test_fixtures(char debug)
+{
+	int err;
+	for (size_t i = 0; i < __FIXTURES_N; ++i)
+	{
+		command_t c = {0};
+
+		__C_APPEND(c, "gcc ");
+		__C_APPEND(c, fixturepaths[i]);
+		__C_APPEND(c, "-o ");
+		__C_APPEND(c, fixture_outputs[i]);
+		__C_APPEND(c, "./dist/iris.o ");
+		__C_APPEND(c, "./dist/log.o ");
+		__C_APPEND(c, "./dist/testlib.o ");
+		__C_APPEND(c, "-Wall ");
+		__C_APPEND(c, "-Wextra ");
+		__C_APPEND(c, "-Werror ");
+		__C_APPEND(c, "-pedantic ");
+		
+		if (debug)
+		{
+			__C_APPEND(c, debugflag);
+		}
+
+		if ((err = command_run(&c)))
+		{
+			return err;
+		}
+
+		LOG(LOG_LEVEL_INFO, "Running %s to build the fixture %s\n", c.buff, fixturepaths[i]);
+	}
+
+	return 0;
 }
 
 static int command_append_arg(command_t *c, const char *arg)
