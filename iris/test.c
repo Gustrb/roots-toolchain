@@ -45,6 +45,7 @@ static int __should_init_a_lexer(void);
 static int __should_be_able_to_lex_programs(void);
 static int __should_not_be_eager_to_find_tokens(void);
 static int __should_be_able_to_lex_string_literals(void);
+static int __should_not_be_able_to_lex_unterminated_strings(void);
 
 int main(void)
 {
@@ -55,6 +56,7 @@ int main(void)
 	err = err || __should_be_able_to_lex_programs();
 	err = err || __should_not_be_eager_to_find_tokens();
 	err = err || __should_be_able_to_lex_string_literals();
+	err = err || __should_not_be_able_to_lex_unterminated_strings();
 	
 	if (!err)
 	{
@@ -296,6 +298,34 @@ static int __should_be_able_to_lex_string_literals(void)
 	ASSERT_TOKEN_EQ("should_be_able_to_lex_string_literals", 40, 42, 2, 2, TOKEN_TYPE_RIGHT_BRACE, t);
 
 	SUCCESS("should_be_able_to_lex_string_literals");
+}
+
+static int __should_not_be_able_to_lex_unterminated_strings(void)
+{
+	START_CASE("should_not_be_able_to_lex_unterminated_strings")
+
+	int err;	
+	const char *sample_program = "\"hello, world\n";
+	size_t sample_program_len = strlen(sample_program);
+
+	lexer_t lexer;
+	token_t t;
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_not_be_able_to_lex_unterminated_strings", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(E_UNTERMINATEDSTRINGLITERAL, err, "should_not_be_able_to_lex_unterminated_strings", "should succeed to lex a valid program");
+
+	sample_program = "\"hello, world";
+	sample_program_len = strlen(sample_program);
+
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_not_be_able_to_lex_unterminated_strings", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(E_UNTERMINATEDSTRINGLITERAL, err, "should_not_be_able_to_lex_unterminated_strings", "should succeed to lex a valid program");
+
+	SUCCESS("should_not_be_able_to_lex_unterminated_strings")
 }
 
 static char __tok_equal(const char *suitename, token_t *e, token_t *g)

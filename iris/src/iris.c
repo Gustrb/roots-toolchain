@@ -257,6 +257,11 @@ int lexer_next_token(lexer_t *l, token_t *t)
 					}
 				}
 
+				if (l->pos == l->data_len)
+				{
+					return E_UNTERMINATEDSTRINGLITERAL;
+				}
+
 				curr = __lexer_advance(l, curr);
 
 				t->end = l->pos;
