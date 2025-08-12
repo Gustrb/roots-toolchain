@@ -2,44 +2,7 @@
 #include <string.h>
 
 #include "../lib/iris.h"
-
-#define START_CASE(name) printf("[TEST " name "]: Running tests...\n");
-#define SUCCESS(name) \
-	do \
-	{ \
-		printf("[TEST " name "]: All tests passes!!\n"); \
-		return 0; \
-	} while(0); 
-
-#define FAIL(name, message) \
-	do \
-	{ \
-		fprintf(stderr, "[FAIL " name "]: " message "\n");	\
-		return 1; \
-	} while (0);
-
-#define ASSERT_EQ(v, err, name, message) \
-	do \
-	{ \
-		if (v != err) FAIL(name, message); \
-	} while (0);
-
-#define ASSERT_TOKEN_EQ(name, s, e, l, c, type, tok) \
-	do \
-	{ \
-		token_t t1; \
-		t1.start = s; \
-		t1.end = e; \
-		t1.line = l; \
-		t1.col = c; \
-		t1.t = type; \
-		if (__tok_equal(name, &t1, &tok)) \
-		{ \
-			FAIL(name, "tokens didn't match"); \
-		} \
-	} while (0);
-
-static char __tok_equal(const char *, token_t *e, token_t *g);
+#include "lib.h"
 
 static int __should_init_a_lexer(void);
 static int __should_be_able_to_lex_programs(void);
@@ -394,45 +357,5 @@ static int __should_be_able_to_lex_char_literals(void)
 	ASSERT_EQ(E_UNTERMINATEDCHARLITERAL, err, "should_be_able_to_lex_char_literals", "should fail to lex an invalid program");
 
 	SUCCESS("should_be_able_to_lex_char_literals");
-}
-
-static char __tok_equal(const char *suitename, token_t *e, token_t *g)
-{
-	if (e == NULL && g == NULL) return 1;
-
-	if (e == NULL && g != NULL) return 0;
-	if (e != NULL && g == NULL) return 0;
-
-	if (e->t != g->t)
-	{
-		fprintf(stderr, "[FAIL %s]: expected type to be: %d but got: %d\n", suitename, e->t, g->t); 
-		return 1;
-	}
-
-	if (e->start != g->start)
-	{
-		fprintf(stderr, "[FAIL %s]: expected start to be: %zu but got: %zu\n", suitename, e->start, g->start); 
-		return 1;
-	}
-
-	if (e->end != g->end)
-	{
-		fprintf(stderr, "[FAIL %s]: expected end to be: %zu but got: %zu\n", suitename, e->end, g->end); 
-		return 1;
-	}
-
-	if (e->line != g->line)
-	{
-		fprintf(stderr, "[FAIL %s]: expected line to be: %zu but got: %zu\n", suitename, e->line, g->line); 
-		return 1;
-	}
-
-	if (e->col != g->col)
-	{
-		fprintf(stderr, "[FAIL %s]: expected column to be: %zu but got: %zu\n", suitename, e->col, g->col); 
-		return 1;
-	}
-
-	return 0;
 }
 

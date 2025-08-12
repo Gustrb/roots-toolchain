@@ -51,6 +51,17 @@ static char *build_command_args =
 	"-Werror "
         "-pedantic";
 
+static char *build_test_lib_command_args =
+        "gcc "
+	"-c "
+        "./test/lib.c "
+        "-o "
+        "./dist/testlib.o "
+        "-Wall "
+        "-Wextra "
+	"-Werror "
+        "-pedantic";
+
 static char *build_tests_command_args =
         "gcc "
         "./test/unittest.c "
@@ -58,6 +69,7 @@ static char *build_tests_command_args =
         "./dist/unittest "
 	"./dist/iris.o "
 	"./dist/log.o "
+	"./dist/testlib.o "
         "-Wall "
         "-Wextra "
 	"-Werror "
@@ -223,9 +235,53 @@ static int __build_loglib(char debug)
         if (system(buff)) return 1;
         return 0;
 }
-	
+
+static int __build_test_lib(char debug)
+{
+	size_t l = strlen(build_test_lib_command_args);
+	size_t stoalloc = l + 1;
+	if (debug)
+	{
+		stoalloc += strlen(debugflag);
+	}
+
+	char *buff = malloc(stoalloc);
+	if (buff == NULL)
+	{
+		return E_OUTOFMEM;
+	}
+
+	size_t i = 0;
+	for (i = 0; i < l; ++i)
+	{
+		buff[i] = build_test_lib_command_args[i];
+	}
+
+	if (debug)
+	{
+		for (size_t j = 0; j < strlen(debugflag); ++j)
+		{
+			buff[i++] = debugflag[j];
+		}
+	}
+
+	buff[i] = '\0';
+
+        LOG(LOG_LEVEL_INFO, "Running %s to build the test lib\n", buff);
+        if (system(buff)) return 1;
+
+	free(buff);
+        return 0;
+}
+
 static int __build_test(char debug)
 {
+	int err;
+	if ((err = __build_test_lib(debug)))
+	{
+		return err;
+	}
+
 	size_t l = strlen(build_tests_command_args);
 	size_t stoalloc = l + 1;
 	if (debug)
