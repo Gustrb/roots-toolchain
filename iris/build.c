@@ -53,9 +53,9 @@ static char *build_command_args =
 
 static char *build_tests_command_args =
         "gcc "
-        "./test.c "
+        "./test/unittest.c "
         "-o "
-        "./dist/test "
+        "./dist/unittest "
 	"./dist/iris.o "
 	"./dist/log.o "
         "-Wall "
@@ -260,6 +260,5 @@ static int __build_test(char debug)
 
 	free(buff);
         return 0;
-
 }
 

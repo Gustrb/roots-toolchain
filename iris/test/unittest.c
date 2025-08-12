@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "./lib/iris.h"
+#include "../lib/iris.h"
 
 #define START_CASE(name) printf("[TEST " name "]: Running tests...\n");
 #define SUCCESS(name) \
