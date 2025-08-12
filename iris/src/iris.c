@@ -282,10 +282,11 @@ int lexer_next_token(lexer_t *l, token_t *t)
 				t->start = start;
 
 				if (curr == '\n' || l->pos >= l->data_len) return E_UNTERMINATEDCHARLITERAL;
+				if (curr == '\'') return E_EMPTYCHARLITERAL;
 
 				curr = __lexer_advance(l, curr);
 
-				if (curr != '\'') return E_CHARLITERALTOOBIG;
+				if (curr != '\'') return E_UNTERMINATEDCHARLITERAL;
 
 				curr = __lexer_advance(l, curr);
 

@@ -348,6 +348,51 @@ static int __should_be_able_to_lex_char_literals(void)
 	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to lex a valid program");
 	ASSERT_TOKEN_EQ("should_be_able_to_lex_char_literals", 0, 3, 0, 1, TOKEN_TYPE_CHAR_LITERAL, t);
 
+	sample_program = "return 'c';";
+	sample_program_len = strlen(sample_program);
+
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_char_literals", 0, 6, 0, 1, TOKEN_TYPE_RETURN, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_char_literals", 7, 10, 0, 7, TOKEN_TYPE_CHAR_LITERAL, t);
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to lex a valid program");
+	ASSERT_TOKEN_EQ("should_be_able_to_lex_char_literals", 10, 10, 0, 11, TOKEN_TYPE_SEMICOLON, t);
+
+	sample_program = "'c";
+	sample_program_len = strlen(sample_program);
+
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(E_UNTERMINATEDCHARLITERAL, err, "should_be_able_to_lex_char_literals", "should fail to lex an invalid program");
+
+	sample_program = "''";
+	sample_program_len = strlen(sample_program);
+
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(E_EMPTYCHARLITERAL, err, "should_be_able_to_lex_char_literals", "should fail to lex an invalid program");
+
+	sample_program = "'ca'";
+	sample_program_len = strlen(sample_program);
+
+	err = lexer_init(&lexer, sample_program, sample_program_len);
+	ASSERT_EQ(0, err, "should_be_able_to_lex_char_literals", "should succeed to initialize a valid input");
+
+	err = lexer_next_token(&lexer, &t);
+	ASSERT_EQ(E_UNTERMINATEDCHARLITERAL, err, "should_be_able_to_lex_char_literals", "should fail to lex an invalid program");
+
 	SUCCESS("should_be_able_to_lex_char_literals");
 }
 
