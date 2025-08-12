@@ -72,6 +72,8 @@ int lexer_init(lexer_t *, const char *, size_t);
 #define E_INVALIDTOKEN 2
 #define E_INVALIDSTATE 3
 #define E_UNTERMINATEDSTRINGLITERAL 4
+#define E_UNTERMINATEDCHARLITERAL 5
+#define E_EMPTYCHARLITERAL 6
 
 int lexer_next_token(lexer_t *, token_t *);
 
