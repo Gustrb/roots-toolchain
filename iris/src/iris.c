@@ -86,6 +86,7 @@ typedef enum
 	STATE_INITIAL,
 	STATE_STRING_IDENTIFIER,
 	STATE_NUMBER_IDENTIFIER,
+	STATE_STRING_LITERAL,
 } state_t;
 
 int lexer_next_token(lexer_t *l, token_t *t)
@@ -201,6 +202,13 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 						return 0;
 					}; break;
+					
+					case '"':
+					{
+						state = STATE_STRING_LITERAL;
+						start = l->pos;
+						__lexer_advance(l, curr);
+					}; break;
 
 					case ' ': case '\n': case '\t':
 					{
@@ -229,6 +237,34 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						}
 					}; break;
 				}
+			}; break;
+			
+			case STATE_STRING_LITERAL:
+			{
+				t->line = l->line;
+				t->col = colstart;
+				t->start = start;
+
+				while (curr != '"' && l->pos < l->data_len)
+				{
+					curr = __lexer_advance(l, curr);
+					if (curr == '\n')
+					{
+						curr = __lexer_advance(l, curr);
+						return E_UNTERMINATEDSTRINGLITERAL;
+					}
+				}
+
+				if (l->pos == l->data_len)
+				{
+					return E_UNTERMINATEDSTRINGLITERAL;
+				}
+
+				curr = __lexer_advance(l, curr);
+
+				t->end = l->pos;
+				t->t = TOKEN_TYPE_STRING_LITERAL;
+				return 0;
 			}; break;
 
 			case STATE_STRING_IDENTIFIER:
@@ -300,6 +336,7 @@ static char __lexer_advance(lexer_t *l, char c)
 	return o;
 }
 
+// I guess SIMD would be super cool for keyword matching (?)
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *stream, token_t *t)
 {
 	unsigned long long h = __hash(stream, t->start, t->end);
