@@ -190,6 +190,48 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						return 0;
 					}; break;
 
+					case '/':
+					{
+						t->t = TOKEN_TYPE_SLASH;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case '+':
+					{
+						t->t = TOKEN_TYPE_PLUS;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case '-':
+					{
+						t->t = TOKEN_TYPE_MINUS;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
 					case ';':
 					{
 						t->t = TOKEN_TYPE_SEMICOLON;
