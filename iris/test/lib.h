@@ -39,7 +39,22 @@
 		} \
 	} while (0);
 
+typedef struct
+{
+	char *buff;
+	size_t len;
+} io_string_t;
+
 char tok_equal(const char *, token_t *e, token_t *g);
+
+#define E_FAILTOOPENFILE 1
+#define E_FAILTOSEEKFILE 2
+#define E_FAILTOTELLFILESIZE 3
+#define E_FAILTOREWINDFILE 4
+#define E_OUTOFMEM 5
+#define E_FAILTOREAD 6
+
+int file_into_memory(const char *, io_string_t *);
 
 #endif
 

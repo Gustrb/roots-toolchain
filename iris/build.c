@@ -291,6 +291,11 @@ static const char *fixture_outputs[__FIXTURES_N] = {
 static int __build_test_fixtures(char debug)
 {
 	int err;
+	if ((err = __build_test_lib(debug)))
+	{
+		return err;
+	}
+
 	for (size_t i = 0; i < __FIXTURES_N; ++i)
 	{
 		command_t c = {0};
