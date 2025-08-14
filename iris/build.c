@@ -278,14 +278,16 @@ static int __build_test(char debug)
         return 0;
 }
 
-#define __FIXTURES_N 1
+#define __FIXTURES_N 2
 
 static const char *fixturepaths[__FIXTURES_N] = {
 	"./test/00-fib.c ",
+	"./test/01-helloworld.c ",
 };
 
 static const char *fixture_outputs[__FIXTURES_N] = {
 	"./dist/00-fib ",
+	"./dist/01-helloworld ",
 };
 
 static int __build_test_fixtures(char debug)

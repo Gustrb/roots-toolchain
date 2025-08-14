@@ -97,7 +97,6 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 	state_t state = STATE_INITIAL;
 
-
 	size_t start = l->pos;
 	size_t colstart = l->col;
 
@@ -264,6 +263,14 @@ int lexer_next_token(lexer_t *l, token_t *t)
 					{
 
 						__lexer_advance(l, curr);
+					}; break;
+
+					case '#':
+					{
+						while (curr != '\n' && l->pos < l->data_len)
+						{
+							curr = __lexer_advance(l, curr);
+						}
 					}; break;
 
 					default:
