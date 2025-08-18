@@ -24,7 +24,7 @@ void __print_token(token_t *t);
 #define ITEM(x) [x] = #x
 
 static const char *__tok_type_table[] = {
-	ITEM(TOKEN_TYPE_COMMA),
+	ITEM(TOKEN_TYPE_COMMA), ITEM(TOKEN_TYPE_DOT),
 
 	ITEM(TOKEN_TYPE_PLUS), ITEM(TOKEN_TYPE_MINUS),
 	ITEM(TOKEN_TYPE_STAR), ITEM(TOKEN_TYPE_SLASH),

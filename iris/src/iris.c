@@ -3,7 +3,7 @@
 #include "../lib/iris.h"
 #include "../lib/log.h"
 
-#define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z')
+#define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) == '_')
 #define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
 #define IS_ALPHANUMERIC(c) IS_ALPHABETIC(c) || IS_NUMERIC(c)
 
@@ -175,6 +175,20 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						return 0;
 					}; break;
 
+					case '.':
+					{
+						t->t = TOKEN_TYPE_DOT;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
 					case '*':
 					{
 						t->t = TOKEN_TYPE_STAR;
@@ -245,6 +259,45 @@ int lexer_next_token(lexer_t *l, token_t *t)
 						return 0;
 					}; break;
 					
+					case ',':
+					{
+						t->t = TOKEN_TYPE_COMMA;
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+					
+					case '[':
+					{
+						t->t = TOKEN_TYPE_LEFT_BRACKET;
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case ']':
+					{
+						t->t = TOKEN_TYPE_RIGHT_BRACKET;
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+	
 					case '"':
 					{
 						state = STATE_STRING_LITERAL;
