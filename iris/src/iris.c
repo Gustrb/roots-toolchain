@@ -177,6 +177,37 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 						return 0;
 					}; break;
+					
+					case '<':
+					{
+						t->t = TOKEN_TYPE_SMALLER;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+					
+					case '>':
+					{
+						t->t = TOKEN_TYPE_GREATER;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+
+					}; break;
+
+
 
 					case '.':
 					{
@@ -306,7 +337,21 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 						return 0;
 					}; break;
-					
+
+					case ':':
+					{
+						t->t = TOKEN_TYPE_COLON;
+
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
 					case ',':
 					{
 						t->t = TOKEN_TYPE_COMMA;
@@ -319,7 +364,59 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 						return 0;
 					}; break;
-					
+
+					case '!':
+					{
+						t->t = TOKEN_TYPE_BANG;
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case '&':
+					{
+						t->t = TOKEN_TYPE_AMPERSAND;
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case '|':
+					{
+						t->t = TOKEN_TYPE_PIPE;
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
+					case '^':
+					{
+						t->t = TOKEN_TYPE_XOR;
+						t->line = l->line;
+						t->col = l->col;
+						t->start = start;
+						t->end = l->pos;
+
+						__lexer_advance(l, curr);
+
+						return 0;
+					}; break;
+
 					case '[':
 					{
 						t->t = TOKEN_TYPE_LEFT_BRACKET;
@@ -402,27 +499,31 @@ int lexer_next_token(lexer_t *l, token_t *t)
 				t->line = l->line;
 				t->col = colstart;
 				t->start = start;
-
-				while (curr != '"' && l->pos < l->data_len)
+				
+				while (l->pos < l->data_len)
 				{
-					curr = __lexer_advance(l, curr);
-					if (curr == '\n')
+					if (curr == '\\')
 					{
 						curr = __lexer_advance(l, curr);
+						if (l->pos >= l->data_len) break;
+						curr = __lexer_advance(l, curr);
+						continue;
+					}
+					if (curr == '"')
+					{
+						curr = __lexer_advance(l, curr);
+						t->end = l->pos;
+						t->t = TOKEN_TYPE_STRING_LITERAL;
+						return 0;
+					}
+					if (curr == '\n')
+					{
 						return E_UNTERMINATEDSTRINGLITERAL;
 					}
+					curr = __lexer_advance(l, curr);
 				}
 
-				if (l->pos == l->data_len)
-				{
-					return E_UNTERMINATEDSTRINGLITERAL;
-				}
-
-				curr = __lexer_advance(l, curr);
-
-				t->end = l->pos;
-				t->t = TOKEN_TYPE_STRING_LITERAL;
-				return 0;
+				return E_UNTERMINATEDSTRINGLITERAL;
 			}; break;
 
 			case STATE_CHAR_LITERAL:
@@ -434,7 +535,20 @@ int lexer_next_token(lexer_t *l, token_t *t)
 				if (curr == '\n' || l->pos >= l->data_len) return E_UNTERMINATEDCHARLITERAL;
 				if (curr == '\'') return E_EMPTYCHARLITERAL;
 
-				curr = __lexer_advance(l, curr);
+				if (curr == '\\')
+				{
+					curr = __lexer_advance(l, curr);
+					if (l->pos >= l->data_len)
+					{
+						return E_UNTERMINATEDCHARLITERAL;
+					}
+
+					curr = __lexer_advance(l, curr);
+				}
+				else
+				{
+					curr = __lexer_advance(l, curr);
+				}
 
 				if (curr != '\'') return E_UNTERMINATEDCHARLITERAL;
 
