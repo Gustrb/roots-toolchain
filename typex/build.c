@@ -40,9 +40,16 @@ typedef struct
 static const char *distfile = "dist";
 static const char *executable_path = "./src/typex.c";
 
+static const char *testarg = "--test";
+static const char *debugarg = "--debug";
+
+static const char *debugflag = " -DDEBUG ";
+
 static int __refresh_date(void);
 
-static int __build_executable(void);
+static int __build_executable(char debug);
+static int __build_loglib(char debug);
+static int __build_test(char debug);
 
 static int command_append_arg(command_t *c, const char *arg);
 static int command_run(command_t *c); 
@@ -51,6 +58,25 @@ static char datebuf[64] = {0};
 
 int main(int argc, char **argv)
 {
+	char test        = 0;
+	char debug       = 0;
+
+	// parsing args
+	if (argc > 1)
+	{
+		for (int i = 1; i < argc; i++)
+		{
+			if (strncmp(argv[i], debugarg, strlen(debugarg)) == 0)
+			{
+				debug = 1;
+			}
+			else if (strncmp(argv[i], testarg, strlen(testarg)) == 0)
+			{
+				test = 1;
+			}
+		}
+	}
+
         struct stat st = {0};
         LOG(LOG_LEVEL_INFO, "Checking if \"%s\" folder exists...\n", distfile);
         if (stat(distfile, &st) == -1)
@@ -69,13 +95,29 @@ int main(int argc, char **argv)
         }
 
         int err;
-        if ((err = __build_executable()))
+        if ((err = __build_loglib(debug)))
+        {
+                LOG(LOG_LEVEL_ERROR, "Failed to build lob library :( exiting out...\n");
+                return err;
+        }
+
+        if ((err = __build_executable(debug)))
         {
                 LOG(LOG_LEVEL_ERROR, "Failed to build executable at: \"%s\" exiting out...\n", executable_path);
                 return err;
         }
 
         LOG(LOG_LEVEL_INFO, "Finished building the app\n");
+	if (test)
+	{
+		if ((err = __build_test(debug)))
+		{
+			LOG(LOG_LEVEL_ERROR, "Failed to build test executable exiting out...\n");
+			return err;
+		}
+
+		LOG(LOG_LEVEL_INFO, "Finished building the tests\n");
+	}
 
         return 0;
 }
@@ -93,19 +135,25 @@ static int __refresh_date(void)
         return 0;
 }
 
-static int __build_executable(void)
+static int __build_executable(char debug)
 {
 	int err;
 	command_t c = {0};
 
 	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "-c ");
 	__C_APPEND(c, "./src/typex.c ");
 	__C_APPEND(c, "-o ");
-	__C_APPEND(c, "./dist/typex ");
+	__C_APPEND(c, "./dist/typex.o ");
 	__C_APPEND(c, "-Wall ");
 	__C_APPEND(c, "-Wextra ");
 	__C_APPEND(c, "-Werror ");
 	__C_APPEND(c, "-pedantic ");
+
+	if (debug)
+	{
+		__C_APPEND(c, debugflag);
+	}
 
 	if ((err = command_run(&c)))
 	{
@@ -113,6 +161,101 @@ static int __build_executable(void)
 	}
 
         LOG(LOG_LEVEL_INFO, "Running %s to build the project\n", c.buff);
+        return 0;
+}
+
+static int __build_loglib(char debug)
+{
+	int err;
+	command_t c = {0};
+
+	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "-c ");
+	__C_APPEND(c, "./src/log.c ");
+	__C_APPEND(c, "-o ");
+	__C_APPEND(c, "./dist/log.o ");
+	__C_APPEND(c, "-Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
+
+	if (debug)
+	{
+		__C_APPEND(c, debugflag);
+	}
+
+	if ((err = command_run(&c)))
+	{
+		return err;
+	}
+
+        LOG(LOG_LEVEL_INFO, "Running %s to build the log library\n", c.buff);
+        return 0;
+}
+
+static int __build_test_lib(char debug)
+{
+	int err;
+	command_t c = {0};
+
+	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "-c ");
+	__C_APPEND(c, "./test/lib.c ");
+	__C_APPEND(c, "-o ");
+	__C_APPEND(c, "./dist/testlib.o ");
+	__C_APPEND(c, "-Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
+
+	if (debug)
+	{
+		__C_APPEND(c, debugflag);
+	}
+
+	if ((err = command_run(&c)))
+	{
+		return err;
+	}
+
+        LOG(LOG_LEVEL_INFO, "Running %s to build the test lib\n", c.buff);
+
+        return 0;
+}
+
+static int __build_test(char debug)
+{
+	int err;
+	if ((err = __build_test_lib(debug)))
+	{
+		return err;
+	}
+
+	command_t c = {0};
+
+	__C_APPEND(c, "gcc ");
+	__C_APPEND(c, "./test/unittest.c ");
+	__C_APPEND(c, "-o ");
+	__C_APPEND(c, "./dist/unittest ");
+	__C_APPEND(c, "./dist/typex.o ");
+	__C_APPEND(c, "./dist/log.o ");
+	__C_APPEND(c, "./dist/testlib.o ");
+	__C_APPEND(c, "-Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
+
+	if (debug)
+	{
+		__C_APPEND(c, debugflag);
+	}
+
+	if ((err = command_run(&c)))
+	{
+		return err;
+	}
+
+        LOG(LOG_LEVEL_INFO, "Running %s to build the tests\n", c.buff);
         return 0;
 }
 
