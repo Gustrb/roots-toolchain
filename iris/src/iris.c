@@ -12,6 +12,7 @@
 static char __lexer_advance(lexer_t *, char);
 static token_type_t __lexer_figure_out_if_it_is_keyword_or_identifier(const char *, token_t *);
 static unsigned long long __hash(const char *, size_t, size_t);
+static char peek_n(lexer_t *, int n);
 
 typedef struct 
 {
@@ -88,6 +89,8 @@ typedef enum
 	STATE_NUMBER_IDENTIFIER,
 	STATE_STRING_LITERAL,
 	STATE_CHAR_LITERAL,
+	STATE_SINGLE_LINE_COMMENT,
+	STATE_MULTILINE_COMMENT,
 } state_t;
 
 int lexer_next_token(lexer_t *l, token_t *t)
@@ -205,16 +208,61 @@ int lexer_next_token(lexer_t *l, token_t *t)
 
 					case '/':
 					{
-						t->t = TOKEN_TYPE_SLASH;
+						// Here we need to peek, if we are at the end
+						// we emit TOKEN_TYPE_SLASH
+						if (l->pos >= l->data_len)
+						{
+							t->t = TOKEN_TYPE_SLASH;
 
-						t->line = l->line;
-						t->col = l->col;
-						t->start = start;
-						t->end = l->pos;
+							t->line = l->line;
+							t->col = l->col;
+							t->start = start;
+							t->end = l->pos;
 
-						__lexer_advance(l, curr);
+							__lexer_advance(l, curr);
 
-						return 0;
+							return 0;
+						}
+						// Else, we peek to get the next token.
+						char next = l->data[l->pos+1];
+						switch (next)
+						{
+							case '/':
+							{
+								while (curr != '\n' && l->pos < l->data_len)
+								{
+									curr = __lexer_advance(l, curr);
+								}
+							}; break;
+							case '*':
+							{
+								__lexer_advance(l, curr);
+								__lexer_advance(l, curr);
+								while (l->pos < l->data_len - 1)
+								{
+									if (peek_n(l, 0) == '*' && peek_n(l, 1) == '/')
+									{
+										__lexer_advance(l, curr);
+										__lexer_advance(l, curr);
+										break;
+									}
+									curr = __lexer_advance(l, curr);
+								}
+							}; break;
+							default:
+							{
+								t->t = TOKEN_TYPE_SLASH;
+
+								t->line = l->line;
+								t->col = l->col;
+								t->start = start;
+								t->end = l->pos;
+
+								__lexer_advance(l, curr);
+
+								return 0;
+							}; break;
+						}
 					}; break;
 
 					case '+':
@@ -445,6 +493,13 @@ int lexer_next_token(lexer_t *l, token_t *t)
 	t->end = t->start;
 
 	return 0;
+}
+
+static char peek_n(lexer_t *l, int n)
+{
+	if (l->pos + n >= l->data_len) return '\0';
+
+	return l->data[l->pos+n];
 }
 
 static char __lexer_advance(lexer_t *l, char c)
