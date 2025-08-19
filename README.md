@@ -7,7 +7,7 @@ This is fun side-project. I want to build *everything* from scratch. Here a few 
 
 - [ ] *Version Control System*: Currently, I am going to use git, I want to have my own.
 - [ ] *Project management software*: A system that I can use to manage projects, issues and tasks
-- [ ] *C Lexer*: The lexer is going to be the lexer that is going to be used by the compiler, by the formatter, by the parser, we can use it for linters, etc.
+- [x] *C Lexer*: The lexer is going to be the lexer that is going to be used by the compiler, by the formatter, by the parser, we can use it for linters, etc.
 - [ ] *C Parser*: The Parser is going to be the basis of the compiler's frontend.
 - [ ] *C Preprocessor*: A preprocessor for the C language, so that we can plug into our C compiler to handle # statements
 - [ ] *C Code Formatter*: This is a dev tool, that will make my life significantly easier, since I won't need to format everything from scratch.
@@ -21,3 +21,6 @@ This is fun side-project. I want to build *everything* from scratch. Here a few 
 
 This is a fun side project I want to start working on, I don't really care about contributions, so if any is made I will take into consideration if I want to keep it or not. Don't expect to use this code, it is going to be mostly shit, I don't care, this one is a challenge for myself, not a comercial project.
  
+## Milestones
+
+- 18, August 2025: I got the lexer being able to lex itself :P. There is still work to be done there, but it is in a nice place
