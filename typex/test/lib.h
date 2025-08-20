@@ -1,6 +1,8 @@
 #ifndef TEST_LIB
 #define TEST_LIB
 
+#include <stdio.h>
+#include <stdlib.h>
 
 #define START_CASE(name) printf("[TEST " name "]: Running tests...\n");
 #define SUCCESS(name) \
