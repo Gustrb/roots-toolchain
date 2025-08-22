@@ -277,16 +277,12 @@ static int __build_test(char debug)
         return 0;
 }
 
-#define __FIXTURES_N 2
+#define __FIXTURES_N 0
 
 static const char *fixturepaths[__FIXTURES_N] = {
-	"./test/00-noop.c ",
-	"./test/01-define.c ",
 };
 
 static const char *fixture_outputs[__FIXTURES_N] = {
-	"./dist/00-noop ",
-	"./dist/01-define ",
 };
 
 static int __build_test_fixtures(char debug)

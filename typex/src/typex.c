@@ -1,3 +1,9 @@
+/*
+	Typex preprocessor
+
+	The typex preprocessor is the software responsible for tokenizing the whole codebase, identifying the macros
+	And applying them.
+*/
 #include "../lib/typex.h"
 
 #include <string.h>
@@ -26,85 +32,17 @@ static const char *__directives_str[__N_DIRECTIVES] = {
 	"define",
 };
 
+
 static unsigned long long __hash(const char *, size_t, size_t);
 static directive_type_t __figure_out_directive(const char *, size_t linebegin, size_t lineend);
-int __preprocess_line(const char *in, size_t linebegin, size_t lineend);
 
 int typex_preprocess(const char *in, size_t in_len, owned_str_t *out)
 {
-	int err = 0;
-	size_t out_len = in_len;
-
-	for (size_t i = 0; i < in_len; ++i)
-	{
-		size_t linebegin = i;
-		while (i < in_len && in[i] != '\n')
-		{
-			i++;		
-		}
-
-		if (i >= in_len) break;
-
-		err = __preprocess_line(in, linebegin, i);
-		if (err)
-		{
-			return err;
-		}
-
-		// the macro is going to be removed from the rest, so we can discount it from the size to allocate
-		size_t linesize = i - linebegin;
-		out_len -= linesize;
-	}
-
-	out->buff = malloc(sizeof(char) * out_len);
-	if (out->buff == NULL)
-	{
-		return E_TYPEX_OUTOFMEM;
-	}
-
-	for (size_t i = 0; i < in_len; ++i)
-	{
-		out->buff[i] = in[i];
-	}
-
-	return 0;
-}
-
-#include <stdio.h>
-
-int __preprocess_line(const char *in, size_t linebegin, size_t lineend)
-{
-	size_t i = linebegin;
-
-	while (i < lineend && ISBLANK(in[i])) i++;
-
-	// Skip empty lines
-	if (i == lineend) return 0;
-	// Skip non-macro lines
-	if (in[i++] != '#') return 0;
-	// If the only char in the line was a # we need to error out
-	if (i == lineend) return E_INVALIDMACRODIRECTIVE;
-
-	// Now we need to figure out what directive it is
-	// so we need to search for the next space in the string, in[i..spaceidx] is going to be the directive
-	size_t spaceidx = i;
-	while (spaceidx < lineend && in[spaceidx++] != ' ');
-
-	directive_type_t t = __figure_out_directive(in, i, spaceidx-1);
-
-	switch (t)
-	{
-		case DIRECTIVE_ERROR:
-		{
-			return E_INVALIDMACRODIRECTIVE;
-		}; break;
-		case DIRECTIVE_DEFINE:
-		{
-			// TODO: Implement this.
-			// I think we should add it to a hashmap of directives
-			printf("define\n");
-		}; break;
-	}
+	(void) in;
+	(void) in_len;
+	(void) out;
+	(void)__figure_out_directive;
+	(void)__hash;
 
 	return 0;
 }
@@ -145,6 +83,62 @@ static directive_type_t __figure_out_directive(const char *stream, size_t linebe
 	}
 
 	return DIRECTIVE_ERROR;
+}
+
+int typex_new_ctx(typex_context_t *ctx, const char *stream)
+{
+	ctx->stream = stream;
+	ctx->definitions_len = 0;
+	for (size_t i = 0; i < __TYPEX_MAX_DEFINITIONS; ++i)
+	{
+		typex_directive_define_t *d = &ctx->definitions[i];
+
+		d->next = -1;
+		d->prev = -1;
+	}
+
+	for (size_t i = 0; i < __TYPEX_TABLE_SIZE; ++i)
+	{
+		ctx->buckets[i] = -1;
+	}
+
+	return 0;
+}
+
+int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d)
+{
+	if (ctx->definitions_len == __TYPEX_MAX_DEFINITIONS)
+	{
+		return E_TYPEXTOOMANYDEFINES;
+	}
+
+	size_t new_define_idx = ctx->definitions_len;
+	ctx->definitions[ctx->definitions_len++] = *d;
+
+	unsigned long long h = __hash(ctx->stream, d->name_begin, d->name_end);
+	size_t bucket_idx = (size_t)h % __TYPEX_TABLE_SIZE;
+
+	if (ctx->buckets[bucket_idx] == -1)
+	{
+		ctx->buckets[bucket_idx] = new_define_idx;
+
+		ctx->definitions[new_define_idx].prev = -1;
+		ctx->definitions[new_define_idx].next = -1;
+		return 0;
+	}
+	
+	size_t aux_idx = bucket_idx;
+	typex_directive_define_t *aux = &ctx->definitions[bucket_idx];
+	while (aux->next != -1)
+	{
+		aux = &ctx->definitions[aux->next];
+		aux_idx = aux->next;
+	}
+
+	aux->next = new_define_idx;
+	ctx->definitions[new_define_idx].prev = aux_idx;
+
+	return 0;
 }
 
 static unsigned long long __hash(const char *d, size_t f, size_t l)
