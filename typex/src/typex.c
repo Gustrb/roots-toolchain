@@ -141,6 +141,16 @@ int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d)
 	return 0;
 }
 
+int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, size_t name_end, typex_directive_define_t *d)
+{
+	// TODO: Implement this
+	(void)ctx;
+	(void)name_begin;
+	(void)name_end;
+	(void)d;
+	return 0;
+}
+
 static unsigned long long __hash(const char *d, size_t f, size_t l)
 {
 	unsigned long long o = 0xcbf29ce484222325ULL;
