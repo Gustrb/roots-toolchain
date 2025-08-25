@@ -8,7 +8,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Scan for TODOs
-        uses: Gustrb/todo-creeper@v1
+        uses: Gustrb/todo-creeper@v1.1
         with:
           threshold: 10
 
