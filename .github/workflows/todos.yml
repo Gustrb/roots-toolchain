@@ -1,0 +1,14 @@
+name: Check TODOs
+on: [push]
+
+jobs:
+  todo-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Scan for TODOs
+        uses: Gustrb/todo-creeper@v1.1.0
+        with:
+          threshold: 10
+
