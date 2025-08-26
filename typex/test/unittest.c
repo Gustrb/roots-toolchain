@@ -2,18 +2,137 @@
 #include <string.h>
 
 #include "lib.h"
+#include "../lib/typex.h"
+
+int __should_initialize_the_context_properly(void);
+int __should_be_able_to_define_a_directive_in_the_context(void);
+int __should_be_able_to_find_a_directive_in_the_context(void);
 
 int main(void)
 {
-	START_CASE("typex");
+	#define casename "typex"
+	START_CASE;
 
 	int err = 0;
+	err = err || __should_initialize_the_context_properly();
+	err = err || __should_be_able_to_define_a_directive_in_the_context();
+	err = err || __should_be_able_to_find_a_directive_in_the_context();
 
 	if (!err)
 	{
-		SUCCESS("lexer");
+		SUCCESS;
 	}
 
-	return 0;
+	#undef casename
+	return err;
+}
+
+int __should_initialize_the_context_properly(void)
+{
+	#define casename "should_initialize_the_context_properly"
+	START_CASE;
+
+	typex_context_t ctx;
+	int err = typex_new_ctx(&ctx, "");
+	ASSERT_EQ(err, 0, "should initialize a context with no errors");
+	ASSERT_EQ(ctx.definitions_len, 0, "the definitions_len should be 0 by default");
+
+	for (size_t i = 0; i < __TYPEX_MAX_DEFINITIONS; ++i)
+	{
+		typex_directive_define_t *d = &ctx.definitions[i];
+		ASSERT_EQ(d->next, -1, "should start the linked list empty");
+		ASSERT_EQ(d->prev, -1, "should start the linked list empty");
+	}
+
+	for (size_t i = 0; i < __TYPEX_TABLE_SIZE; ++i)
+	{
+		ASSERT_EQ(ctx.buckets[i], -1, "all the buckets should be empty by default");
+	}
+
+	SUCCESS;
+	#undef casename
+}
+
+int __should_be_able_to_define_a_directive_in_the_context(void)
+{
+	#define casename "should_be_able_to_define_a_directive_in_the_context"
+	START_CASE;
+
+	typex_context_t ctx;
+	int err = typex_new_ctx(&ctx, "#define x 1");
+	ASSERT_EQ(err, 0, "should initialize a context with no errors");
+	ASSERT_EQ(ctx.definitions_len, 0, "the definitions_len should be 0 by default");
+
+	typex_directive_define_t d = {
+		.name_begin = 8, 
+		.name_end   = 9, 
+
+		.replacement_begin = 10, 
+		.replacement_end   = 11, 
+	};
+
+	err = typex_define_replacement(&ctx, &d);
+	ASSERT_EQ(err, 0, "should define a replacement macro in the context");
+
+	ASSERT_EQ(ctx.definitions_len, 1, "should define a replacement macro in the context");
+
+	typex_directive_define_t d_new = ctx.definitions[0];
+	ASSERT_EQ(d_new.name_begin, d.name_begin, "should add the definition to the list");
+	ASSERT_EQ(d_new.name_end, d.name_end, "should add the definition to the list");
+	ASSERT_EQ(d_new.replacement_begin, d.replacement_begin, "should add the definition to the list");
+	ASSERT_EQ(d_new.replacement_end, d.replacement_end, "should add the definition to the list");
+
+	int idx = -1;
+	for (size_t i = 0; i < __TYPEX_TABLE_SIZE; ++i)
+	{
+		if (ctx.buckets[i] != -1)
+		{
+			idx = ctx.buckets[i];
+			break;
+		}
+	}
+
+	ASSERT_EQ(idx, 0, "should add the definition to the list");
+	ASSERT_EQ(d_new.prev, -1, "the previous element of the head should be -1");	
+	ASSERT_EQ(d_new.next, -1, "the next element of the head should be -1");	
+
+	SUCCESS;
+	#undef casename
+}
+
+int __should_be_able_to_find_a_directive_in_the_context(void)
+{
+	#define casename "should_be_able_to_find_a_directive_in_the_context"
+	START_CASE;
+
+	typex_context_t ctx;
+	int err = typex_new_ctx(&ctx, "#define x 1");
+	ASSERT_EQ(err, 0, "should initialize a context with no errors");
+	ASSERT_EQ(ctx.definitions_len, 0, "the definitions_len should be 0 by default");
+
+	typex_directive_define_t d_new;
+	err = typex_define_replacement_lookup(&ctx, 0, 0, &d_new);
+	ASSERT_EQ(err, E_KEYNOTFOUND, "it cant find a directive if none is in the list");
+
+	typex_directive_define_t d = {
+		.name_begin = 8, 
+		.name_end   = 9, 
+
+		.replacement_begin = 10, 
+		.replacement_end   = 11, 
+	};
+
+	err = typex_define_replacement(&ctx, &d);
+	ASSERT_EQ(err, 0, "should define a replacement macro in the context");
+	ASSERT_EQ(ctx.definitions_len, 1, "should define a replacement macro in the context");
+
+	err = typex_define_replacement_lookup(&ctx, 8, 9, &d_new);
+	ASSERT_EQ(err, 0, "it can find a directive if one is in the list");
+
+	err = typex_define_replacement_lookup(&ctx, 10, 11, &d_new);
+	ASSERT_EQ(err, E_KEYNOTFOUND, "it has to fail to find something that is not in the map");
+
+	SUCCESS;
+	#undef casename
 }
 

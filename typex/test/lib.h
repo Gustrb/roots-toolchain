@@ -1,29 +1,31 @@
 #ifndef TEST_LIB
 #define TEST_LIB
 
+#include <stdio.h>
+#include <stdlib.h>
 
-#define START_CASE(name) printf("[TEST " name "]: Running tests...\n");
-#define SUCCESS(name) \
+#define START_CASE printf("[TEST " casename "]: Running tests...\n");
+#define SUCCESS \
 	do \
 	{ \
-		printf("[TEST " name "]: All tests passes!!\n"); \
+		printf("[TEST " casename "]: All tests passes!!\n"); \
 		return 0; \
 	} while(0); 
 
-#define FAIL(name, message) \
+#define FAIL(message) \
 	do \
 	{ \
-		fprintf(stderr, "[FAIL " name "]: " message "\n");	\
+		fprintf(stderr, "[FAIL " casename "]: " message "\n");	\
 		return 1; \
 	} while (0);
 
-#define ASSERT_EQ(v, err, name, message) \
+#define ASSERT_EQ(v, err, message) \
 	do \
 	{ \
-		if (v != err) FAIL(name, message); \
+		if (v != err) FAIL(message); \
 	} while (0);
 
-#define ASSERT_TOKEN_EQ(name, s, e, l, c, type, tok) \
+#define ASSERT_TOKEN_EQ(s, e, l, c, type, tok) \
 	do \
 	{ \
 		token_t t1; \
@@ -34,7 +36,7 @@
 		t1.t = type; \
 		if (tok_equal(name, &t1, &tok)) \
 		{ \
-			FAIL(name, "tokens didn't match"); \
+			FAIL("tokens didn't match"); \
 		} \
 	} while (0);
 
