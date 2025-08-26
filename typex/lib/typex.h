@@ -43,6 +43,8 @@ int typex_new_ctx(typex_context_t *ctx, const char *stream);
 
 #define E_TYPEXTOOMANYDEFINES 3
 int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d);
+
+#define E_KEYNOTFOUND 4
 int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, size_t name_end, typex_directive_define_t *d);
 
 #endif

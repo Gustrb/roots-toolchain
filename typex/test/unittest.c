@@ -6,6 +6,7 @@
 
 int __should_initialize_the_context_properly(void);
 int __should_be_able_to_define_a_directive_in_the_context(void);
+int __should_be_able_to_find_a_directive_in_the_context(void);
 
 int main(void)
 {
@@ -15,6 +16,7 @@ int main(void)
 	int err = 0;
 	err = err || __should_initialize_the_context_properly();
 	err = err || __should_be_able_to_define_a_directive_in_the_context();
+	err = err || __should_be_able_to_find_a_directive_in_the_context();
 
 	if (!err)
 	{
@@ -93,6 +95,42 @@ int __should_be_able_to_define_a_directive_in_the_context(void)
 	ASSERT_EQ(idx, 0, "should add the definition to the list");
 	ASSERT_EQ(d_new.prev, -1, "the previous element of the head should be -1");	
 	ASSERT_EQ(d_new.next, -1, "the next element of the head should be -1");	
+
+	SUCCESS;
+	#undef casename
+}
+
+int __should_be_able_to_find_a_directive_in_the_context(void)
+{
+	#define casename "should_be_able_to_find_a_directive_in_the_context"
+	START_CASE;
+
+	typex_context_t ctx;
+	int err = typex_new_ctx(&ctx, "#define x 1");
+	ASSERT_EQ(err, 0, "should initialize a context with no errors");
+	ASSERT_EQ(ctx.definitions_len, 0, "the definitions_len should be 0 by default");
+
+	typex_directive_define_t d_new;
+	err = typex_define_replacement_lookup(&ctx, 0, 0, &d_new);
+	ASSERT_EQ(err, E_KEYNOTFOUND, "it cant find a directive if none is in the list");
+
+	typex_directive_define_t d = {
+		.name_begin = 8, 
+		.name_end   = 9, 
+
+		.replacement_begin = 10, 
+		.replacement_end   = 11, 
+	};
+
+	err = typex_define_replacement(&ctx, &d);
+	ASSERT_EQ(err, 0, "should define a replacement macro in the context");
+	ASSERT_EQ(ctx.definitions_len, 1, "should define a replacement macro in the context");
+
+	err = typex_define_replacement_lookup(&ctx, 8, 9, &d_new);
+	ASSERT_EQ(err, 0, "it can find a directive if one is in the list");
+
+	err = typex_define_replacement_lookup(&ctx, 10, 11, &d_new);
+	ASSERT_EQ(err, E_KEYNOTFOUND, "it has to fail to find something that is not in the map");
 
 	SUCCESS;
 	#undef casename

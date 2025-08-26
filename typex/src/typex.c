@@ -32,9 +32,9 @@ static const char *__directives_str[__N_DIRECTIVES] = {
 	"define",
 };
 
-
 static unsigned long long __hash(const char *, size_t, size_t);
 static directive_type_t __figure_out_directive(const char *, size_t linebegin, size_t lineend);
+static char __str_eql(const char *b1, const char *e1, const char *b2, const char *e2);
 
 int typex_preprocess(const char *in, size_t in_len, owned_str_t *out)
 {
@@ -143,11 +143,31 @@ int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d)
 
 int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, size_t name_end, typex_directive_define_t *d)
 {
-	// TODO: Implement this
-	(void)ctx;
-	(void)name_begin;
-	(void)name_end;
-	(void)d;
+	unsigned long long h = __hash(ctx->stream, name_begin, name_end);
+	size_t bucket_idx = (size_t)h % __TYPEX_TABLE_SIZE;
+	
+	if (ctx->buckets[bucket_idx] == -1)
+	{
+		return E_KEYNOTFOUND;
+	}
+
+	typex_directive_define_t *aux = &ctx->definitions[ctx->buckets[bucket_idx]];
+	while (!__str_eql(ctx->stream + aux->name_begin, ctx->stream + aux->name_end, ctx->stream + name_begin, ctx->stream + name_end))
+	{
+		if (aux->next == -1)
+		{
+			return E_KEYNOTFOUND;
+		}
+
+		aux = &ctx->definitions[aux->next];
+	}
+
+	d->name_begin = aux->name_begin;
+	d->name_end = aux->name_end;
+
+	d->replacement_begin = aux->replacement_begin;
+	d->replacement_end = aux->replacement_end;
+
 	return 0;
 }
 
@@ -160,5 +180,24 @@ static unsigned long long __hash(const char *d, size_t f, size_t l)
 	}
 
 	return o;
+}
+
+
+static char __str_eql(const char *b1, const char *e1, const char *b2, const char *e2)
+{
+	size_t s1 = e1 - b1;
+	size_t s2 = e2 - b2; 
+	
+	if (s1 != s2) return 0;
+
+	for (size_t i = 0; i < s1; ++i)
+	{
+		if (b1[i] != b2[i])
+		{
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
