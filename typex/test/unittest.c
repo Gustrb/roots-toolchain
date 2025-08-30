@@ -7,6 +7,7 @@
 int __should_initialize_the_context_properly(void);
 int __should_be_able_to_define_a_directive_in_the_context(void);
 int __should_be_able_to_find_a_directive_in_the_context(void);
+int __should_be_able_to_list_all_tokens_of_an_input(void);
 
 int main(void)
 {
@@ -17,7 +18,7 @@ int main(void)
 	err = err || __should_initialize_the_context_properly();
 	err = err || __should_be_able_to_define_a_directive_in_the_context();
 	err = err || __should_be_able_to_find_a_directive_in_the_context();
-
+	err = err || __should_be_able_to_list_all_tokens_of_an_input();
 	if (!err)
 	{
 		SUCCESS;
@@ -64,11 +65,11 @@ int __should_be_able_to_define_a_directive_in_the_context(void)
 	ASSERT_EQ(ctx.definitions_len, 0, "the definitions_len should be 0 by default");
 
 	typex_directive_define_t d = {
-		.name_begin = 8, 
-		.name_end   = 9, 
+		.name_begin = 8,
+		.name_end   = 9,
 
-		.replacement_begin = 10, 
-		.replacement_end   = 11, 
+		.replacement_begin = 10,
+		.replacement_end   = 11,
 	};
 
 	err = typex_define_replacement(&ctx, &d);
@@ -93,8 +94,8 @@ int __should_be_able_to_define_a_directive_in_the_context(void)
 	}
 
 	ASSERT_EQ(idx, 0, "should add the definition to the list");
-	ASSERT_EQ(d_new.prev, -1, "the previous element of the head should be -1");	
-	ASSERT_EQ(d_new.next, -1, "the next element of the head should be -1");	
+	ASSERT_EQ(d_new.prev, -1, "the previous element of the head should be -1");
+	ASSERT_EQ(d_new.next, -1, "the next element of the head should be -1");
 
 	SUCCESS;
 	#undef casename
@@ -115,11 +116,11 @@ int __should_be_able_to_find_a_directive_in_the_context(void)
 	ASSERT_EQ(err, E_KEYNOTFOUND, "it cant find a directive if none is in the list");
 
 	typex_directive_define_t d = {
-		.name_begin = 8, 
-		.name_end   = 9, 
+		.name_begin = 8,
+		.name_end   = 9,
 
-		.replacement_begin = 10, 
-		.replacement_end   = 11, 
+		.replacement_begin = 10,
+		.replacement_end   = 11,
 	};
 
 	err = typex_define_replacement(&ctx, &d);
@@ -136,3 +137,37 @@ int __should_be_able_to_find_a_directive_in_the_context(void)
 	#undef casename
 }
 
+int __should_be_able_to_list_all_tokens_of_an_input(void)
+{
+    #define casename "should_be_able_to_list_all_tokens_of_an_input"
+    START_CASE;
+
+    const char *program = "#define a 1\nint main(void)\n{\nreturn a;\n}";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 1, .end = 7, .t = TYPEX_TOKEN_TYPE_MACRO }
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    while (tok_idx < num_toks && (err = typex_lexer_next_token(&l, &t)) == 0)
+    {
+        ASSERT_EQ(tok_idx < num_toks, 1, "should not have more tokens than expected");
+        ASSERT_EQ(err, 0, "should not fail to get the next token");
+        if (t.t == TYPEX_TOKEN_TYPE_EOF) break;
+
+        typex_token_t *expected = &expected_tokens[tok_idx];
+        ASSERT_EQ(expected->begin, t.begin , "token does not match");
+        ASSERT_EQ(expected->end, t.end , "token does not match");
+        ASSERT_EQ(expected->t, t.t , "token does not match");
+        tok_idx++;
+    }
+
+    SUCCESS
+    #undef casename
+}
