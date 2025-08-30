@@ -211,6 +211,7 @@ typedef enum
     __TYPEX_LEXER_STATE_ALPHA = 2,
     __TYPEX_LEXER_STATE_STRING = 3,
     __TYPEX_LEXER_STATE_CHAR = 4,
+    __TYPEX_LEXER_STATE_NUMERIC_LITERAL = 5,
 } __typex_lexer_state_t;
 
 #include <stdio.h>
@@ -231,6 +232,13 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
                 if (IS_ALPHANUMERIC(curr))
                 {
                     state = __TYPEX_LEXER_STATE_ALPHA;
+                    begin = lexer->pos;
+                    break;
+                }
+
+                if (IS_NUMERIC(curr))
+                {
+                    state = __TYPEX_LEXER_STATE_NUMERIC_LITERAL;
                     begin = lexer->pos;
                     break;
                 }
@@ -339,6 +347,20 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
                 token->t = TYPEX_TOKEN_TYPE_WORD;
                 token->begin = begin;
                 token->end = ++lexer->pos;
+                return 0;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_NUMERIC_LITERAL:
+            {
+                while (IS_NUMERIC(curr) && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_WORD;
+                token->begin = begin;
+                token->end = lexer->pos;
                 return 0;
             }; break;
         }

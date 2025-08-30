@@ -15,6 +15,8 @@ int __should_error_out_when_tokenizing_an_unterminated_string(void);
 int __should_be_able_to_tokenize_a_char(void);
 int __should_error_out_when_tokenizing_an_unterminated_char(void);
 
+int __should_be_able_to_tokenize_an_integer(void);
+
 int main(void)
 {
 	#define casename "typex"
@@ -29,6 +31,7 @@ int main(void)
 	err = err || __should_error_out_when_tokenizing_an_unterminated_string();
 	err = err || __should_be_able_to_tokenize_a_char();
 	err = err || __should_error_out_when_tokenizing_an_unterminated_char();
+	err = err || __should_be_able_to_tokenize_an_integer();
 
 
 	if (!err)
@@ -267,7 +270,6 @@ int __should_be_able_to_tokenize_a_char(void)
 
     ASSERT_TOKENS
 
-
     SUCCESS;
     #undef casename
 }
@@ -286,6 +288,32 @@ int __should_error_out_when_tokenizing_an_unterminated_char(void)
     int err = typex_lexer_next_token(&l, &t);
 
     ASSERT_EQ(E_TYPEX_ERR_UNEXPECTED_EOF, err, "should fail parsing unterminated chars");
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_tokenize_an_integer(void)
+{
+    #define casename "should_be_able_to_tokenize_an_integer"
+    START_CASE;
+
+    const char *program = "1 20 42";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 1, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 2, .end = 4, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 5, .end = 7, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
 
     SUCCESS;
     #undef casename
