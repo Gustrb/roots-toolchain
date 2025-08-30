@@ -8,6 +8,7 @@ int __should_initialize_the_context_properly(void);
 int __should_be_able_to_define_a_directive_in_the_context(void);
 int __should_be_able_to_find_a_directive_in_the_context(void);
 int __should_be_able_to_list_all_tokens_of_an_input(void);
+int __should_be_able_to_tokenize_a_string(void);
 
 int main(void)
 {
@@ -19,6 +20,8 @@ int main(void)
 	err = err || __should_be_able_to_define_a_directive_in_the_context();
 	err = err || __should_be_able_to_find_a_directive_in_the_context();
 	err = err || __should_be_able_to_list_all_tokens_of_an_input();
+	err = err || __should_be_able_to_tokenize_a_string();
+
 	if (!err)
 	{
 		SUCCESS;
@@ -137,6 +140,25 @@ int __should_be_able_to_find_a_directive_in_the_context(void)
 	#undef casename
 }
 
+#define ASSERT_TOKENS \
+do \
+{ \
+while (tok_idx < num_toks && (err = typex_lexer_next_token(&l, &t)) == 0) \
+{ \
+    ASSERT_EQ(tok_idx < num_toks, 1, "should not have more tokens than expected"); \
+    ASSERT_EQ(err, 0, "should not fail to get the next token"); \
+    typex_token_t *expected = &expected_tokens[tok_idx]; \
+    ASSERT_EQ(expected->begin, t.begin , "token does not match"); \
+    ASSERT_EQ(expected->end, t.end , "token does not match"); \
+    ASSERT_EQ(expected->t, t.t , "token does not match"); \
+    tok_idx++; \
+} \
+\
+ASSERT_EQ(err, 0, "should not fail to get the next token"); \
+ASSERT_EQ(tok_idx, num_toks, "should have all tokens"); \
+} while (0); \
+
+
 int __should_be_able_to_list_all_tokens_of_an_input(void)
 {
     #define casename "should_be_able_to_list_all_tokens_of_an_input"
@@ -167,23 +189,31 @@ int __should_be_able_to_list_all_tokens_of_an_input(void)
     size_t tok_idx = 0;
     int err;
 
-    while (tok_idx < num_toks && (err = typex_lexer_next_token(&l, &t)) == 0)
-    {
-        ASSERT_EQ(tok_idx < num_toks, 1, "should not have more tokens than expected");
-        ASSERT_EQ(err, 0, "should not fail to get the next token");
+    ASSERT_TOKENS
 
-        typex_token_t *expected = &expected_tokens[tok_idx];
-        // printf("expected->begin: %zu, expected->end: %zu, expected->t: %d\n", expected->begin, expected->end, expected->t);
-        // printf("t.begin: %zu, t.end: %zu, t.t: %d\n", t.begin, t.end, t.t);
+    SUCCESS
+    #undef casename
+}
 
-        ASSERT_EQ(expected->begin, t.begin , "token does not match");
-        ASSERT_EQ(expected->end, t.end , "token does not match");
-        ASSERT_EQ(expected->t, t.t , "token does not match");
-        tok_idx++;
-    }
+int __should_be_able_to_tokenize_a_string(void)
+{
+    #define casename "should_be_able_to_tokenize_a_string"
+    START_CASE
 
-    ASSERT_EQ(err, 0, "should not fail to get the next token");
-    ASSERT_EQ(tok_idx, num_toks, "should have all tokens");
+    const char *program = "\"hello world\"";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 13, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
 
     SUCCESS
     #undef casename
