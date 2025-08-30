@@ -8,7 +8,9 @@ int __should_initialize_the_context_properly(void);
 int __should_be_able_to_define_a_directive_in_the_context(void);
 int __should_be_able_to_find_a_directive_in_the_context(void);
 int __should_be_able_to_list_all_tokens_of_an_input(void);
+
 int __should_be_able_to_tokenize_a_string(void);
+int __should_error_out_when_tokenizing_an_unterminated_string(void);
 
 int main(void)
 {
@@ -21,6 +23,7 @@ int main(void)
 	err = err || __should_be_able_to_find_a_directive_in_the_context();
 	err = err || __should_be_able_to_list_all_tokens_of_an_input();
 	err = err || __should_be_able_to_tokenize_a_string();
+	err = err || __should_error_out_when_tokenizing_an_unterminated_string();
 
 	if (!err)
 	{
@@ -214,6 +217,26 @@ int __should_be_able_to_tokenize_a_string(void)
     int err;
 
     ASSERT_TOKENS
+
+    SUCCESS
+    #undef casename
+}
+
+int __should_error_out_when_tokenizing_an_unterminated_string(void)
+{
+    #define casename "should_error_out_when_tokenizing_an_unterminated_string"
+    START_CASE
+
+    const char *program = "\"hello world";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+
+    typex_token_t t;
+    int err;
+    err = typex_lexer_next_token(&l, &t);
+
+    ASSERT_EQ(E_TYPEX_ERR_UNEXPECTED_EOF, err, "should fail parsing unterminated strings")
 
     SUCCESS
     #undef casename
