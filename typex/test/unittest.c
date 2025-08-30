@@ -7,6 +7,15 @@
 int __should_initialize_the_context_properly(void);
 int __should_be_able_to_define_a_directive_in_the_context(void);
 int __should_be_able_to_find_a_directive_in_the_context(void);
+int __should_be_able_to_list_all_tokens_of_an_input(void);
+
+int __should_be_able_to_tokenize_a_string(void);
+int __should_error_out_when_tokenizing_an_unterminated_string(void);
+
+int __should_be_able_to_tokenize_a_char(void);
+int __should_error_out_when_tokenizing_an_unterminated_char(void);
+
+int __should_be_able_to_tokenize_an_integer(void);
 
 int main(void)
 {
@@ -17,6 +26,13 @@ int main(void)
 	err = err || __should_initialize_the_context_properly();
 	err = err || __should_be_able_to_define_a_directive_in_the_context();
 	err = err || __should_be_able_to_find_a_directive_in_the_context();
+	err = err || __should_be_able_to_list_all_tokens_of_an_input();
+	err = err || __should_be_able_to_tokenize_a_string();
+	err = err || __should_error_out_when_tokenizing_an_unterminated_string();
+	err = err || __should_be_able_to_tokenize_a_char();
+	err = err || __should_error_out_when_tokenizing_an_unterminated_char();
+	err = err || __should_be_able_to_tokenize_an_integer();
+
 
 	if (!err)
 	{
@@ -64,11 +80,11 @@ int __should_be_able_to_define_a_directive_in_the_context(void)
 	ASSERT_EQ(ctx.definitions_len, 0, "the definitions_len should be 0 by default");
 
 	typex_directive_define_t d = {
-		.name_begin = 8, 
-		.name_end   = 9, 
+		.name_begin = 8,
+		.name_end   = 9,
 
-		.replacement_begin = 10, 
-		.replacement_end   = 11, 
+		.replacement_begin = 10,
+		.replacement_end   = 11,
 	};
 
 	err = typex_define_replacement(&ctx, &d);
@@ -93,8 +109,8 @@ int __should_be_able_to_define_a_directive_in_the_context(void)
 	}
 
 	ASSERT_EQ(idx, 0, "should add the definition to the list");
-	ASSERT_EQ(d_new.prev, -1, "the previous element of the head should be -1");	
-	ASSERT_EQ(d_new.next, -1, "the next element of the head should be -1");	
+	ASSERT_EQ(d_new.prev, -1, "the previous element of the head should be -1");
+	ASSERT_EQ(d_new.next, -1, "the next element of the head should be -1");
 
 	SUCCESS;
 	#undef casename
@@ -115,11 +131,11 @@ int __should_be_able_to_find_a_directive_in_the_context(void)
 	ASSERT_EQ(err, E_KEYNOTFOUND, "it cant find a directive if none is in the list");
 
 	typex_directive_define_t d = {
-		.name_begin = 8, 
-		.name_end   = 9, 
+		.name_begin = 8,
+		.name_end   = 9,
 
-		.replacement_begin = 10, 
-		.replacement_end   = 11, 
+		.replacement_begin = 10,
+		.replacement_end   = 11,
 	};
 
 	err = typex_define_replacement(&ctx, &d);
@@ -136,3 +152,169 @@ int __should_be_able_to_find_a_directive_in_the_context(void)
 	#undef casename
 }
 
+#define ASSERT_TOKENS \
+do \
+{ \
+while (tok_idx < num_toks && (err = typex_lexer_next_token(&l, &t)) == 0) \
+{ \
+    ASSERT_EQ(tok_idx < num_toks, 1, "should not have more tokens than expected"); \
+    ASSERT_EQ(err, 0, "should not fail to get the next token"); \
+    typex_token_t *expected = &expected_tokens[tok_idx]; \
+    ASSERT_EQ(expected->begin, t.begin , "token does not match"); \
+    ASSERT_EQ(expected->end, t.end , "token does not match"); \
+    ASSERT_EQ(expected->t, t.t , "token does not match"); \
+    tok_idx++; \
+} \
+\
+ASSERT_EQ(err, 0, "should not fail to get the next token"); \
+ASSERT_EQ(tok_idx, num_toks, "should have all tokens"); \
+} while (0); \
+
+
+int __should_be_able_to_list_all_tokens_of_an_input(void)
+{
+    #define casename "should_be_able_to_list_all_tokens_of_an_input"
+    START_CASE;
+
+    const char *program = "#define a 1\nint main(void)\n{\nreturn a;\n}";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 1, .end = 7, .t = TYPEX_TOKEN_TYPE_MACRO },
+        { .begin = 8, .end = 9, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 10, .end = 11, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 12, .end = 15, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 16, .end = 20, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 20, .end = 21, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 21, .end = 25, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 25, .end = 26, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 27, .end = 28, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 29, .end = 35, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 36, .end = 37, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 37, .end = 38, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 39, .end = 40, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS
+    #undef casename
+}
+
+int __should_be_able_to_tokenize_a_string(void)
+{
+    #define casename "should_be_able_to_tokenize_a_string"
+    START_CASE
+
+    const char *program = "\"hello world\"";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 13, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS
+    #undef casename
+}
+
+int __should_error_out_when_tokenizing_an_unterminated_string(void)
+{
+    #define casename "should_error_out_when_tokenizing_an_unterminated_string"
+    START_CASE
+
+    const char *program = "\"hello world";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t t;
+
+    int err = typex_lexer_next_token(&l, &t);
+
+    ASSERT_EQ(E_TYPEX_ERR_UNEXPECTED_EOF, err, "should fail parsing unterminated strings");
+
+    SUCCESS
+    #undef casename
+}
+
+int __should_be_able_to_tokenize_a_char(void)
+{
+    #define casename "should_be_able_to_tokenize_a_char"
+    START_CASE;
+
+    const char *program = "'a'";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 3, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_error_out_when_tokenizing_an_unterminated_char(void)
+{
+    #define casename "should_error_out_when_tokenizing_an_unterminated_char"
+    START_CASE;
+
+    const char *program = "'hello world";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t t;
+
+    int err = typex_lexer_next_token(&l, &t);
+
+    ASSERT_EQ(E_TYPEX_ERR_UNEXPECTED_EOF, err, "should fail parsing unterminated chars");
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_tokenize_an_integer(void)
+{
+    #define casename "should_be_able_to_tokenize_an_integer"
+    START_CASE;
+
+    const char *program = "1 20 42";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 1, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 2, .end = 4, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 5, .end = 7, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS;
+    #undef casename
+}

@@ -16,13 +16,35 @@ typedef struct
 {
 	int next;
 	int prev;
-	
+
 	size_t name_begin;
 	size_t name_end;
-	
+
 	size_t replacement_begin;
 	size_t replacement_end;
 } typex_directive_define_t;
+
+typedef enum
+{
+    TYPEX_TOKEN_TYPE_WORD,
+    TYPEX_TOKEN_TYPE_MACRO,
+    TYPEX_TOKEN_TYPE_EOF,
+} typex_token_type_t;
+
+typedef struct
+{
+    typex_token_type_t t;
+
+    size_t begin;
+    size_t end;
+} typex_token_t;
+
+typedef struct
+{
+    const char *stream;
+    size_t len;
+    size_t pos;
+} typex_lexer_t;
 
 typedef struct
 {
@@ -47,5 +69,7 @@ int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d);
 #define E_KEYNOTFOUND 4
 int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, size_t name_end, typex_directive_define_t *d);
 
-#endif
+#define E_TYPEX_ERR_UNEXPECTED_EOF 5
+int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token);
 
+#endif

@@ -10,6 +10,10 @@
 
 #define ISBLANK(c) ( (c) == ' ' || (c) == '\n' || (c) == '\t' || (c) == '\r' )
 
+#define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) == '_')
+#define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
+#define IS_ALPHANUMERIC(c) IS_ALPHABETIC(c) || IS_NUMERIC(c)
+
 #define __N_DIRECTIVES 1
 
 typedef enum
@@ -126,7 +130,7 @@ int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d)
 		ctx->definitions[new_define_idx].next = -1;
 		return 0;
 	}
-	
+
 	size_t aux_idx = bucket_idx;
 	typex_directive_define_t *aux = &ctx->definitions[bucket_idx];
 	while (aux->next != -1)
@@ -145,7 +149,7 @@ int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, siz
 {
 	unsigned long long h = __hash(ctx->stream, name_begin, name_end);
 	size_t bucket_idx = (size_t)h % __TYPEX_TABLE_SIZE;
-	
+
 	if (ctx->buckets[bucket_idx] == -1)
 	{
 		return E_KEYNOTFOUND;
@@ -182,12 +186,11 @@ static unsigned long long __hash(const char *d, size_t f, size_t l)
 	return o;
 }
 
-
 static char __str_eql(const char *b1, const char *e1, const char *b2, const char *e2)
 {
 	size_t s1 = e1 - b1;
-	size_t s2 = e2 - b2; 
-	
+	size_t s2 = e2 - b2;
+
 	if (s1 != s2) return 0;
 
 	for (size_t i = 0; i < s1; ++i)
@@ -201,3 +204,169 @@ static char __str_eql(const char *b1, const char *e1, const char *b2, const char
 	return 1;
 }
 
+typedef enum
+{
+    __TYPEX_LEXER_STATE_START = 0,
+    __TYPEX_LEXER_STATE_MACRO = 1,
+    __TYPEX_LEXER_STATE_ALPHA = 2,
+    __TYPEX_LEXER_STATE_STRING = 3,
+    __TYPEX_LEXER_STATE_CHAR = 4,
+    __TYPEX_LEXER_STATE_NUMERIC_LITERAL = 5,
+} __typex_lexer_state_t;
+
+#include <stdio.h>
+
+int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
+{
+    __typex_lexer_state_t state = __TYPEX_LEXER_STATE_START;
+
+    size_t begin = lexer->pos;
+
+    while (lexer->pos < lexer->len)
+    {
+        char curr = lexer->stream[lexer->pos];
+        switch (state)
+        {
+            case __TYPEX_LEXER_STATE_START:
+            {
+                if (IS_ALPHANUMERIC(curr))
+                {
+                    state = __TYPEX_LEXER_STATE_ALPHA;
+                    begin = lexer->pos;
+                    break;
+                }
+
+                if (IS_NUMERIC(curr))
+                {
+                    state = __TYPEX_LEXER_STATE_NUMERIC_LITERAL;
+                    begin = lexer->pos;
+                    break;
+                }
+
+                switch (curr)
+                {
+                    case ' ': case '\t': case '\r': case '\n':
+                    {
+                        ++lexer->pos;
+                    }; break;
+
+                    case '"':
+                    {
+                        state = __TYPEX_LEXER_STATE_STRING;
+                        begin = lexer->pos;
+                        lexer->pos++;
+                    }; break;
+
+                    case '\'':
+                    {
+                        state = __TYPEX_LEXER_STATE_CHAR;
+                        begin = lexer->pos;
+                        lexer->pos++;
+                    }; break;
+
+                    case '#':
+                    {
+                        state = __TYPEX_LEXER_STATE_MACRO;
+                        begin = lexer->pos + 1;
+                    }; break;
+
+                    default:
+                    {
+                        token->begin = lexer->pos;
+                        token->end = ++lexer->pos;
+                        token->t = TYPEX_TOKEN_TYPE_WORD;
+                        return 0;
+                    }; break;
+               }
+            }; break;
+            case __TYPEX_LEXER_STATE_MACRO:
+            {
+                while (curr != ' ' && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                if (lexer->pos == lexer->len)
+                {
+                    return E_TYPEX_ERR_UNEXPECTED_EOF;
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_MACRO;
+                token->begin = begin;
+                token->end = lexer->pos;
+                return 0;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_ALPHA:
+            {
+                while (IS_ALPHANUMERIC(curr) && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_WORD;
+                token->begin = begin;
+                token->end = lexer->pos;
+                return 0;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_STRING:
+            {
+                while (curr != '"' && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                if (lexer->pos == lexer->len)
+                {
+                    return E_TYPEX_ERR_UNEXPECTED_EOF;
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_WORD;
+                token->begin = begin;
+                token->end = ++lexer->pos;
+                return 0;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_CHAR:
+            {
+                while (curr != '\'' && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                if (lexer->pos == lexer->len)
+                {
+                    return E_TYPEX_ERR_UNEXPECTED_EOF;
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_WORD;
+                token->begin = begin;
+                token->end = ++lexer->pos;
+                return 0;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_NUMERIC_LITERAL:
+            {
+                while (IS_NUMERIC(curr) && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_WORD;
+                token->begin = begin;
+                token->end = lexer->pos;
+                return 0;
+            }; break;
+        }
+    }
+
+    token->t = TYPEX_TOKEN_TYPE_EOF;
+
+    return 0;
+}
