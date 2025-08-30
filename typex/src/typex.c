@@ -210,6 +210,7 @@ typedef enum
     __TYPEX_LEXER_STATE_MACRO = 1,
     __TYPEX_LEXER_STATE_ALPHA = 2,
     __TYPEX_LEXER_STATE_STRING = 3,
+    __TYPEX_LEXER_STATE_CHAR = 4,
 } __typex_lexer_state_t;
 
 #include <stdio.h>
@@ -244,6 +245,13 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
                     case '"':
                     {
                         state = __TYPEX_LEXER_STATE_STRING;
+                        begin = lexer->pos;
+                        lexer->pos++;
+                    }; break;
+
+                    case '\'':
+                    {
+                        state = __TYPEX_LEXER_STATE_CHAR;
                         begin = lexer->pos;
                         lexer->pos++;
                     }; break;
@@ -299,6 +307,25 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
             case __TYPEX_LEXER_STATE_STRING:
             {
                 while (curr != '"' && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                if (lexer->pos == lexer->len)
+                {
+                    return E_TYPEX_ERR_UNEXPECTED_EOF;
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_WORD;
+                token->begin = begin;
+                token->end = ++lexer->pos;
+                return 0;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_CHAR:
+            {
+                while (curr != '\'' && lexer->pos < lexer->len)
                 {
                     ++lexer->pos;
                     curr = lexer->stream[lexer->pos];
