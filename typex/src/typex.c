@@ -10,6 +10,10 @@
 
 #define ISBLANK(c) ( (c) == ' ' || (c) == '\n' || (c) == '\t' || (c) == '\r' )
 
+#define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) == '_')
+#define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
+#define IS_ALPHANUMERIC(c) IS_ALPHABETIC(c) || IS_NUMERIC(c)
+
 #define __N_DIRECTIVES 1
 
 typedef enum
@@ -204,6 +208,7 @@ typedef enum
 {
     __TYPEX_LEXER_STATE_START = 0,
     __TYPEX_LEXER_STATE_MACRO = 1,
+    __TYPEX_LEXER_STATE_ALPHA = 2,
 } __typex_lexer_state_t;
 
 int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
@@ -219,6 +224,13 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
         {
             case __TYPEX_LEXER_STATE_START:
             {
+                if (IS_ALPHANUMERIC(curr))
+                {
+                    state = __TYPEX_LEXER_STATE_ALPHA;
+                    begin = lexer->pos;
+                    break;
+                }
+
                 switch (curr)
                 {
                     case ' ': case '\t': case '\r': case '\n':
@@ -231,7 +243,15 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
                         state = __TYPEX_LEXER_STATE_MACRO;
                         begin = lexer->pos + 1;
                     }; break;
-                }
+
+                    default:
+                    {
+                        token->begin = lexer->pos;
+                        token->end = ++lexer->pos;
+                        token->t = TYPEX_TOKEN_TYPE_WORD;
+                        return 0;
+                    }; break;
+               }
             }; break;
             case __TYPEX_LEXER_STATE_MACRO:
             {
@@ -247,6 +267,20 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
                 }
 
                 token->t = TYPEX_TOKEN_TYPE_MACRO;
+                token->begin = begin;
+                token->end = lexer->pos;
+                return 0;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_ALPHA:
+            {
+                while (IS_ALPHANUMERIC(curr) && lexer->pos < lexer->len)
+                {
+                    ++lexer->pos;
+                    curr = lexer->stream[lexer->pos];
+                }
+
+                token->t = TYPEX_TOKEN_TYPE_WORD;
                 token->begin = begin;
                 token->end = lexer->pos;
                 return 0;

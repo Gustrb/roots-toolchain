@@ -147,7 +147,19 @@ int __should_be_able_to_list_all_tokens_of_an_input(void)
 
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
-        { .begin = 1, .end = 7, .t = TYPEX_TOKEN_TYPE_MACRO }
+        { .begin = 1, .end = 7, .t = TYPEX_TOKEN_TYPE_MACRO },
+        { .begin = 8, .end = 9, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 10, .end = 11, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 12, .end = 15, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 16, .end = 20, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 20, .end = 21, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 21, .end = 25, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 25, .end = 26, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 27, .end = 28, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 29, .end = 35, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 36, .end = 37, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 37, .end = 38, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 39, .end = 40, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
     typex_token_t t;
@@ -159,14 +171,19 @@ int __should_be_able_to_list_all_tokens_of_an_input(void)
     {
         ASSERT_EQ(tok_idx < num_toks, 1, "should not have more tokens than expected");
         ASSERT_EQ(err, 0, "should not fail to get the next token");
-        if (t.t == TYPEX_TOKEN_TYPE_EOF) break;
 
         typex_token_t *expected = &expected_tokens[tok_idx];
+        // printf("expected->begin: %zu, expected->end: %zu, expected->t: %d\n", expected->begin, expected->end, expected->t);
+        // printf("t.begin: %zu, t.end: %zu, t.t: %d\n", t.begin, t.end, t.t);
+
         ASSERT_EQ(expected->begin, t.begin , "token does not match");
         ASSERT_EQ(expected->end, t.end , "token does not match");
         ASSERT_EQ(expected->t, t.t , "token does not match");
         tok_idx++;
     }
+
+    ASSERT_EQ(err, 0, "should not fail to get the next token");
+    ASSERT_EQ(tok_idx, num_toks, "should have all tokens");
 
     SUCCESS
     #undef casename
