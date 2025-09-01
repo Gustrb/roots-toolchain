@@ -12,7 +12,7 @@ jobs:
 
       - name: Scan for TODOs
         id: todo-scan # Add this ID to reference outputs
-        uses: Gustrb/todo-creeper@v1.2.2
+        uses: Gustrb/todo-creeper@v1.2.3
         with:
           threshold: 10
           exclude-patterns: "node_modules,dist,build,.git,tests/mocks"
