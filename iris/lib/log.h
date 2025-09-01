@@ -13,4 +13,3 @@ typedef enum
 int iris_log(log_level_t level, const char *message, ...);
 
 #endif
-

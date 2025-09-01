@@ -49,4 +49,3 @@ static int __refresh_date(char *datebuff, size_t l)
 	if (!ret) return E_FAILSTRFTIME;
 	return 0;
 }
-
