@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "../lib/log.h"
+// TODO: Wtf
 
 #define E_FAILSTRFTIME 9999
 
@@ -49,4 +50,3 @@ static int __refresh_date(char *datebuff, size_t l)
 	if (!ret) return E_FAILSTRFTIME;
 	return 0;
 }
-
