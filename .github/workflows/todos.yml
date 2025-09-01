@@ -1,13 +1,17 @@
 name: Check TODOs
-on: [push]
+on: [push, pull_request] # Add pull_request for better issue creation
 
 jobs:
   todo-check:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write # Required to create issues
+      contents: read # Required to read repository content
     steps:
       - uses: actions/checkout@v4
 
       - name: Scan for TODOs
+        id: todo-scan # Add this ID to reference outputs
         uses: Gustrb/todo-creeper@v1.2.2
         with:
           threshold: 10
