@@ -14,3 +14,8 @@ jobs:
           exclude-patterns: "node_modules,dist,build,.git,tests/mocks"
           create-issues: true
           issue-labels: "todo,enhancement,needs-review"
+
+      - name: Report Issue Creation
+        run: |
+          echo "Created ${{ steps.todo-scan.outputs.issues-created }} new issues"
+          echo "Linked ${{ steps.todo-scan.outputs.issues-linked }} existing issues"
