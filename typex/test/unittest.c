@@ -325,12 +325,14 @@ int __should_be_able_to_tokenize_a_float(void)
     #define casename "should_be_able_to_tokenize_a_float"
     START_CASE;
 
-    const char *program = "1.2";
+    const char *program = "1.2 1.2e-4 1e4";
     size_t len = strlen(program);
 
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
         { .begin = 0, .end = 3, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 4, .end = 10, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 11, .end = 14, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
     typex_token_t t;
