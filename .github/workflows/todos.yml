@@ -6,9 +6,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Scan for TODOs
-        uses: Gustrb/todo-creeper@v1.1.0
+        uses: Gustrb/todo-creeper@v1.2.0
         with:
           threshold: 10
-
+          exclude-patterns: "node_modules,dist,build,.git,tests/mocks"
+          create-issues: true
+          issue-labels: "todo,enhancement,needs-review"
