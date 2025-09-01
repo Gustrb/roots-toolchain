@@ -9,6 +9,9 @@
 #include <string.h>
 
 #define ISBLANK(c) ( (c) == ' ' || (c) == '\n' || (c) == '\t' || (c) == '\r' )
+#define IS_BIN(c) ((c) == '0' || (c) == '1')
+#define IS_HEX(c) (((c) >= '0' && (c) <= '9') || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
+#define IS_OCT(c) (((c) >= '0' && (c) <= '7'))
 
 #define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) == '_')
 #define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
@@ -214,6 +217,10 @@ typedef enum
     __TYPEX_LEXER_STATE_NUMERIC_LITERAL = 5,
     __TYPEX_LEXER_STATE_FLOAT_LITERAL = 6,
     __TYPEX_LEXER_STATE_EXPONENT_LITERAL = 7,
+    __TYPEX_LEXER_STATE_DIFFERENT_NUMBER_SYSTEM = 8,
+    __TYPEX_LEXER_STATE_BINARY_LITERAL = 9,
+    __TYPEX_LEXER_STATE_OCTAL_LITERAL = 10,
+    __TYPEX_LEXER_STATE_HEXADECIMAL_LITERAL = 11,
 } __typex_lexer_state_t;
 
 #include <stdio.h>
@@ -354,6 +361,13 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
 
             case __TYPEX_LEXER_STATE_NUMERIC_LITERAL:
             {
+                if (curr == '0')
+                {
+                    ++lexer->pos;
+                    state = __TYPEX_LEXER_STATE_DIFFERENT_NUMBER_SYSTEM;
+                    break;
+                }
+
                 while (IS_NUMERIC(curr) && lexer->pos < lexer->len)
                 {
                     ++lexer->pos;
@@ -420,7 +434,78 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
                 token->end = lexer->pos;
                 return 0;
             }; break;
+
+            case __TYPEX_LEXER_STATE_DIFFERENT_NUMBER_SYSTEM:
+            {
+                if (curr == 'b' || curr == 'B')
+                {
+                    lexer->pos++;
+                    state = __TYPEX_LEXER_STATE_BINARY_LITERAL;
+                    break;
+                }
+                if (curr == 'x' || curr == 'X')
+                {
+                    lexer->pos++;
+                    state = __TYPEX_LEXER_STATE_HEXADECIMAL_LITERAL;
+                    break;
+                }
+
+                // Assume octal
+                state = __TYPEX_LEXER_STATE_OCTAL_LITERAL;
+                lexer->pos++;
+                break;
+            }; break;
+
+            case __TYPEX_LEXER_STATE_BINARY_LITERAL:
+            {
+                if (!IS_BIN(curr))
+                {
+                    token->t = TYPEX_TOKEN_TYPE_WORD;
+                    token->begin = begin;
+                    token->end = lexer->pos;
+                    return 0;
+                }
+
+                ++lexer->pos;
+                curr = lexer->stream[lexer->pos];
+            }; break;
+
+            case __TYPEX_LEXER_STATE_HEXADECIMAL_LITERAL:
+            {
+                if (!IS_HEX(curr))
+                {
+                    token->t = TYPEX_TOKEN_TYPE_WORD;
+                    token->begin = begin;
+                    token->end = lexer->pos;
+                    return 0;
+                }
+
+                ++lexer->pos;
+                curr = lexer->stream[lexer->pos];
+            }; break;
+
+            case __TYPEX_LEXER_STATE_OCTAL_LITERAL:
+            {
+                if (!IS_OCT(curr))
+                {
+                    token->t = TYPEX_TOKEN_TYPE_WORD;
+                    token->begin = begin;
+                    token->end = lexer->pos;
+                    return 0;
+                }
+
+                ++lexer->pos;
+                curr = lexer->stream[lexer->pos];
+            }; break;
         }
+    }
+
+    if (state == __TYPEX_LEXER_STATE_BINARY_LITERAL || state == __TYPEX_LEXER_STATE_HEXADECIMAL_LITERAL || state == __TYPEX_LEXER_STATE_OCTAL_LITERAL)
+    {
+        token->t = TYPEX_TOKEN_TYPE_WORD;
+        token->begin = begin;
+        token->end = lexer->pos;
+        return 0;
     }
 
     token->t = TYPEX_TOKEN_TYPE_EOF;
