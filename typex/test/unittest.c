@@ -23,6 +23,8 @@ int __should_be_able_to_support_hexadecimal(void);
 
 int __should_be_able_to_tokenize_a_float(void);
 
+int __should_be_able_to_do_a_first_pass(void);
+
 int main(void)
 {
 	#define casename "typex"
@@ -42,7 +44,7 @@ int main(void)
 	err = err || __should_be_able_to_support_hexadecimal();
 	err = err || __should_be_able_to_support_octal();
 	err = err || __should_be_able_to_tokenize_a_float();
-
+	err = err || __should_be_able_to_do_a_first_pass();
 
 	if (!err)
 	{
@@ -425,6 +427,32 @@ int __should_be_able_to_support_hexadecimal(void)
     int err;
 
     ASSERT_TOKENS
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_do_a_first_pass(void)
+{
+    #define casename "should_be_able_to_do_a_first_pass"
+    START_CASE;
+
+    const char *program = "#define a 1\nint main(void)\n{\nreturn a;\n}";
+    size_t len = strlen(program);
+
+	typex_context_t ctx;
+	int err = typex_new_ctx(&ctx, "");
+	ASSERT_EQ(err, 0, "should initialize a context with no errors");
+
+    err = typex_first_pass(program, len, &ctx);
+    ASSERT_EQ(err, 0, "should not fail to do a first pass on a valid program");
+
+    typex_directive_define_t d_new;
+	err = typex_define_replacement_lookup(&ctx, 8, 9, &d_new);
+
+	ASSERT_EQ(err, 0, "it can find a directive if one is in the list");
+	ASSERT_EQ(d_new.replacement_begin, 10, "it should have the correct replacement_begin");
+	ASSERT_EQ(d_new.replacement_end, 11, "it should have the correct replacement_end");
 
     SUCCESS;
     #undef casename
