@@ -16,6 +16,7 @@ int __should_be_able_to_tokenize_a_char(void);
 int __should_error_out_when_tokenizing_an_unterminated_char(void);
 
 int __should_be_able_to_tokenize_an_integer(void);
+int __should_be_able_to_tokenize_a_float(void);
 
 int main(void)
 {
@@ -32,7 +33,7 @@ int main(void)
 	err = err || __should_be_able_to_tokenize_a_char();
 	err = err || __should_error_out_when_tokenizing_an_unterminated_char();
 	err = err || __should_be_able_to_tokenize_an_integer();
-
+	err = err || __should_be_able_to_tokenize_a_float();
 
 	if (!err)
 	{
@@ -306,6 +307,32 @@ int __should_be_able_to_tokenize_an_integer(void)
         { .begin = 0, .end = 1, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 2, .end = 4, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 5, .end = 7, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_tokenize_a_float(void)
+{
+    #define casename "should_be_able_to_tokenize_a_float"
+    START_CASE;
+
+    const char *program = "1.2 1.2e-4 1e4";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 3, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 4, .end = 10, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 11, .end = 14, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
     typex_token_t t;
