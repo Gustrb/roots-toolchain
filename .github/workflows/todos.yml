@@ -1,5 +1,5 @@
 name: Check TODOs
-on: [push, pull_request] # Add pull_request for better issue creation
+on: [pull_request] # Add pull_request for better issue creation
 
 jobs:
   todo-check:
