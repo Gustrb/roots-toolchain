@@ -72,4 +72,6 @@ int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, siz
 #define E_TYPEX_ERR_UNEXPECTED_EOF 5
 int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token);
 
+int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ctx);
+
 #endif

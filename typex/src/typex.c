@@ -39,19 +39,107 @@ static const char *__directives_str[__N_DIRECTIVES] = {
 	"define",
 };
 
+int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ctx);
+int __typex_define_macro(typex_lexer_t *, typex_context_t *ctx);
+
 static unsigned long long __hash(const char *, size_t, size_t);
 static directive_type_t __figure_out_directive(const char *, size_t linebegin, size_t lineend);
 static char __str_eql(const char *b1, const char *e1, const char *b2, const char *e2);
 
 int typex_preprocess(const char *in, size_t in_len, owned_str_t *out)
 {
-	(void) in;
-	(void) in_len;
+    typex_context_t root;
+    int err = typex_new_ctx(&root, in);
+    if (err)
+    {
+        return err;
+    }
+
+    if ((err == typex_first_pass(in, in_len, &root)) != 0)
+    {
+        return err;
+    }
+
 	(void) out;
 	(void)__figure_out_directive;
 	(void)__hash;
 
 	return 0;
+}
+#include <stdio.h>
+
+int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ctx)
+{
+    (void)root_ctx;
+
+    typex_lexer_t l = { .len=in_len, .stream=stream, .pos=0 };
+    typex_token_t tok;
+    int err;
+
+    while ((err = typex_lexer_next_token(&l, &tok)) == 0)
+    {
+        if (err)
+        {
+            return err;
+        }
+
+        if (tok.t == TYPEX_TOKEN_TYPE_EOF)
+        {
+            break;
+        }
+
+        if (tok.t == TYPEX_TOKEN_TYPE_WORD)
+        {
+            continue;
+        }
+
+
+        if (tok.t == TYPEX_TOKEN_TYPE_MACRO)
+        {
+            // We need to figure out which directive this is...
+            directive_type_t dirt = __figure_out_directive(stream, tok.begin, tok.end);
+            switch (dirt)
+            {
+                case DIRECTIVE_ERROR:
+                {
+                    // TODO: handle the error message
+                }; break;
+                case DIRECTIVE_DEFINE:
+                {
+                    return __typex_define_macro(&l, root_ctx);
+                }; break;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int __typex_define_macro(typex_lexer_t *l, typex_context_t *ctx)
+{
+    typex_directive_define_t d;
+
+    // We need to get the macro name, it is the next token
+    typex_token_t t;
+    int err = typex_lexer_next_token(l, &t);
+    if (err)
+    {
+        return err;
+    }
+
+    d.name_begin = t.begin;
+    d.name_end = t.end;
+
+    err = typex_lexer_next_token(l, &t);
+    if (err)
+    {
+        return err;
+    }
+
+    d.replacement_begin = t.begin;
+    d.replacement_end = t.end;
+
+    return typex_define_replacement(ctx, &d);
 }
 
 static directive_type_t __figure_out_directive(const char *stream, size_t linebegin, size_t lineend)
