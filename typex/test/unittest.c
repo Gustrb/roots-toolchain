@@ -16,6 +16,11 @@ int __should_be_able_to_tokenize_a_char(void);
 int __should_error_out_when_tokenizing_an_unterminated_char(void);
 
 int __should_be_able_to_tokenize_an_integer(void);
+
+int __should_be_able_to_support_binary(void);
+int __should_be_able_to_support_octal(void);
+int __should_be_able_to_support_hexadecimal(void);
+
 int __should_be_able_to_tokenize_a_float(void);
 
 int main(void)
@@ -33,7 +38,11 @@ int main(void)
 	err = err || __should_be_able_to_tokenize_a_char();
 	err = err || __should_error_out_when_tokenizing_an_unterminated_char();
 	err = err || __should_be_able_to_tokenize_an_integer();
+	err = err || __should_be_able_to_support_binary();
+	err = err || __should_be_able_to_support_hexadecimal();
+	err = err || __should_be_able_to_support_octal();
 	err = err || __should_be_able_to_tokenize_a_float();
+
 
 	if (!err)
 	{
@@ -333,6 +342,81 @@ int __should_be_able_to_tokenize_a_float(void)
         { .begin = 0, .end = 3, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 4, .end = 10, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 11, .end = 14, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_support_binary(void)
+{
+    #define casename "should_be_able_to_support_binary"
+    START_CASE;
+
+    const char *program = "0b1010 0B1111";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 6, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 7, .end = 13, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_support_octal(void)
+{
+    #define casename "should_be_able_to_support_octal"
+    START_CASE;
+
+    const char *program = "0123 0777";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 4, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 5, .end = 9, .t = TYPEX_TOKEN_TYPE_WORD },
+    };
+
+    typex_token_t t;
+    size_t num_toks = sizeof(expected_tokens) / sizeof(expected_tokens[0]);
+    size_t tok_idx = 0;
+    int err;
+
+    ASSERT_TOKENS
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_support_hexadecimal(void)
+{
+    #define casename "should_be_able_to_support_hexadecimal"
+    START_CASE;
+
+    const char *program = "0x123 0XABC";
+    size_t len = strlen(program);
+
+    typex_lexer_t l = {.len=len, .pos=0, .stream=program};
+    typex_token_t expected_tokens[] = {
+        { .begin = 0, .end = 5, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 6, .end = 11, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
     typex_token_t t;
