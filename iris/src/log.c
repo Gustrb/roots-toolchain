@@ -4,7 +4,6 @@
 #include <time.h>
 
 #include "../lib/log.h"
-// TODO: Wtf
 
 #define E_FAILSTRFTIME 9999
 
