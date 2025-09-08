@@ -24,6 +24,7 @@ int __should_be_able_to_support_hexadecimal(void);
 int __should_be_able_to_tokenize_a_float(void);
 
 int __should_be_able_to_do_a_first_pass(void);
+int __should_be_able_to_allocate_the_correct_size_for_the_output(void);
 
 int main(void)
 {
@@ -45,6 +46,7 @@ int main(void)
 	err = err || __should_be_able_to_support_octal();
 	err = err || __should_be_able_to_tokenize_a_float();
 	err = err || __should_be_able_to_do_a_first_pass();
+	err = err || __should_be_able_to_allocate_the_correct_size_for_the_output();
 
 	if (!err)
 	{
@@ -453,6 +455,31 @@ int __should_be_able_to_do_a_first_pass(void)
 	ASSERT_EQ(err, 0, "it can find a directive if one is in the list");
 	ASSERT_EQ(d_new.replacement_begin, 10, "it should have the correct replacement_begin");
 	ASSERT_EQ(d_new.replacement_end, 11, "it should have the correct replacement_end");
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_allocate_the_correct_size_for_the_output(void)
+{
+    #define casename "should_be_able_to_do_a_first_pass"
+    START_CASE;
+
+    const char *program = "#define a 1\nint main(void)\n{\nreturn a;\n}";
+    size_t len = strlen(program);
+
+	typex_context_t ctx;
+	int err = typex_new_ctx(&ctx, "");
+	ASSERT_EQ(err, 0, "should initialize a context with no errors");
+
+	owned_str_t out;
+    err = typex_preprocess(program, len, &out);
+    ASSERT_EQ(err, 0, "should not fail to do a first pass on a valid program");
+
+    size_t total_len = 23;
+    ASSERT_EQ(total_len, out.len, "the preprocessor should allocate the correct size");
+
+    free(out.buff);
 
     SUCCESS;
     #undef casename

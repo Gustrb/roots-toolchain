@@ -7,6 +7,7 @@
 #include "../lib/typex.h"
 
 #include <string.h>
+#include <assert.h>
 
 #define ISBLANK(c) ( (c) == ' ' || (c) == '\n' || (c) == '\t' || (c) == '\r' )
 #define IS_BIN(c) ((c) == '0' || (c) == '1')
@@ -39,12 +40,17 @@ static const char *__directives_str[__N_DIRECTIVES] = {
 	"define",
 };
 
+int owned_str_append(owned_str_t *, owned_str_t *);
+
 int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ctx);
+int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_ctx, owned_str_t *out);
 int __typex_define_macro(typex_lexer_t *, typex_context_t *ctx);
 
 static unsigned long long __hash(const char *, size_t, size_t);
 static directive_type_t __figure_out_directive(const char *, size_t linebegin, size_t lineend);
 static char __str_eql(const char *b1, const char *e1, const char *b2, const char *e2);
+
+#include <stdio.h>
 
 int typex_preprocess(const char *in, size_t in_len, owned_str_t *out)
 {
@@ -55,23 +61,23 @@ int typex_preprocess(const char *in, size_t in_len, owned_str_t *out)
         return err;
     }
 
-    if ((err == typex_first_pass(in, in_len, &root)) != 0)
+    if ((err = typex_first_pass(in, in_len, &root)) != 0)
     {
         return err;
     }
 
-	(void) out;
-	(void)__figure_out_directive;
-	(void)__hash;
+
+    if ((err = typex_second_pass(in, in_len, &root, out)) != 0)
+    {
+        return err;
+    }
 
 	return 0;
 }
-#include <stdio.h>
+
 
 int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ctx)
 {
-    (void)root_ctx;
-
     typex_lexer_t l = { .len=in_len, .stream=stream, .pos=0 };
     typex_token_t tok;
     int err;
@@ -111,6 +117,98 @@ int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ct
             }
         }
     }
+
+    return 0;
+}
+
+int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_ctx, owned_str_t *out)
+{
+    out->len = 0;
+    out->buff = NULL;
+
+    int err;
+    typex_lexer_t l = { .len=in_len, .stream=stream, .pos=0 };
+    typex_token_t t;
+
+    while ((err = typex_lexer_next_token(&l, &t)) == 0)
+    {
+        if (t.t == TYPEX_TOKEN_TYPE_EOF) break;
+        if (t.t == TYPEX_TOKEN_TYPE_MACRO)
+        {
+            directive_type_t dir = __figure_out_directive(stream, t.begin, t.end);
+
+            switch (dir)
+            {
+                case DIRECTIVE_DEFINE:
+                {
+                    int e = typex_lexer_next_token(&l, &t);
+                    if (e != 0) return e;
+
+                    e = typex_lexer_next_token(&l, &t);
+                    if (e != 0) return e;
+
+                }; break;
+                case DIRECTIVE_ERROR:
+                {
+                    return E_INVALIDMACRODIRECTIVE;
+                }; break;
+            }
+
+            continue;
+        }
+
+        // if it is a word, we need to check if it is inside our context
+        assert(t.t == TYPEX_TOKEN_TYPE_WORD);
+
+        typex_directive_define_t d;
+        int lookup = typex_define_replacement_lookup(root_ctx, t.begin, t.end, &d);
+        if (lookup == E_KEYNOTFOUND)
+        {
+            // we need to copy the word to the output
+            owned_str_t word = { .len = t.end - t.begin, .buff = (char *) stream + t.begin };
+            err = owned_str_append(out, &word);
+            if (err)
+            {
+                return err;
+            }
+
+            continue;
+        }
+
+        if (lookup != 0)
+        {
+            // something weird happened over here
+            return lookup;
+        }
+
+        // Lookup succeeded, we need to replace
+        owned_str_t word = { .len = d.replacement_end - d.replacement_begin, .buff = (char *) stream + d.replacement_begin };
+        if ((err = owned_str_append(out, &word)) != 0)
+        {
+            return err;
+        }
+    }
+
+    return 0;
+}
+
+int owned_str_append(owned_str_t *dst, owned_str_t *src)
+{
+    size_t new_len = dst->len + src->len;
+    char *new_buff = realloc(dst->buff, new_len);
+
+    if (!new_buff)
+    {
+        return E_TYPEX_OUTOFMEM;
+    }
+
+    for (size_t i = 0; i < src->len; i++)
+    {
+        new_buff[dst->len + i] = src->buff[i];
+    }
+
+    dst->len = new_len;
+    dst->buff = new_buff;
 
     return 0;
 }
