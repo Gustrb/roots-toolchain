@@ -18,12 +18,13 @@
 #define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
 #define IS_ALPHANUMERIC(c) IS_ALPHABETIC(c) || IS_NUMERIC(c)
 
-#define __N_DIRECTIVES 1
+#define __N_DIRECTIVES 2
 
 typedef enum
 {
 	DIRECTIVE_ERROR,
 	DIRECTIVE_DEFINE,
+	DIRECTIVE_UNDEFINE,
 } directive_type_t;
 
 typedef struct
@@ -34,6 +35,7 @@ typedef struct
 
 static const directive_pair_t __directives[__N_DIRECTIVES] = {
 	{ .t = DIRECTIVE_DEFINE, .v = 5500604938257788306ULL },
+	{ .t = DIRECTIVE_UNDEFINE, .v = 12228404724271304561ULL },
 };
 
 static const char *__directives_str[__N_DIRECTIVES] = {
@@ -44,8 +46,12 @@ int owned_str_append(owned_str_t *, owned_str_t *);
 
 int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ctx);
 int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_ctx, owned_str_t *out);
+
 int __typex_consume_define(typex_lexer_t *);
+int __typex_consume_undefine(typex_lexer_t *);
+
 int __typex_define_macro(typex_lexer_t *, typex_context_t *ctx);
+int __typex_undefine_macro(typex_lexer_t *, typex_context_t *ctx);
 
 static unsigned long long __hash(const char *, size_t, size_t);
 static directive_type_t __figure_out_directive(const char *, size_t linebegin, size_t lineend);
@@ -119,6 +125,10 @@ int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ct
                 {
                     return __typex_define_macro(&l, root_ctx);
                 }; break;
+                case DIRECTIVE_UNDEFINE:
+                {
+                    return __typex_undefine_macro(&l, root_ctx);
+                }; break;
             }
         }
     }
@@ -150,7 +160,14 @@ int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_c
                     {
                         return err;
                     }
-               }; break;
+                }; break;
+                case DIRECTIVE_UNDEFINE:
+                {
+                    if ((err = __typex_consume_undefine(&l)) != 0)
+                    {
+                        return err;
+                    }
+                }; break;
                 case DIRECTIVE_ERROR:
                 {
                     return E_INVALIDMACRODIRECTIVE;
@@ -261,6 +278,12 @@ int __typex_consume_define(typex_lexer_t *l)
     return 0;
 }
 
+int __typex_consume_undefine(typex_lexer_t *l)
+{
+    (void)l;
+    return 0;
+}
+
 int owned_str_append(owned_str_t *dst, owned_str_t *src)
 {
     size_t new_len = dst->len + src->len;
@@ -318,6 +341,14 @@ int __typex_define_macro(typex_lexer_t *l, typex_context_t *ctx)
     d.replacement_end = t.end;
 
     return typex_define_replacement(ctx, &d);
+}
+
+int __typex_undefine_macro(typex_lexer_t *l, typex_context_t *ctx)
+{
+    (void)l;
+    (void)ctx;
+
+    return 0;
 }
 
 static directive_type_t __figure_out_directive(const char *stream, size_t linebegin, size_t lineend)
@@ -412,6 +443,43 @@ int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d)
 	ctx->definitions[new_define_idx].prev = aux_idx;
 
 	return 0;
+}
+
+int typex_undefine_replacement(typex_context_t *ctx, typex_directive_undefine_t *u)
+{
+    unsigned long long h = __hash(ctx->stream, u->name_begin, u->name_end);
+	size_t bucket_idx = (size_t)h % __TYPEX_TABLE_SIZE;
+
+	if (ctx->buckets[bucket_idx] == -1)
+	{
+		return E_KEYNOTFOUND;
+	}
+
+	typex_directive_define_t *aux = &ctx->definitions[ctx->buckets[bucket_idx]];
+	while (!__str_eql(ctx->stream + aux->name_begin, ctx->stream + aux->name_end, ctx->stream + u->name_begin, ctx->stream + u->name_end))
+	{
+		if (aux->next == -1)
+		{
+			return E_KEYNOTFOUND;
+		}
+
+		aux = &ctx->definitions[aux->next];
+	}
+
+	if (aux->prev == -1)
+	{
+		ctx->buckets[bucket_idx] = aux->next;
+	}
+	else
+	{
+		ctx->definitions[aux->prev].next = aux->next;
+	}
+
+	aux->next = -1;
+	aux->prev = -1;
+	ctx->definitions_len--;
+
+    return 0;
 }
 
 int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, size_t name_end, typex_directive_define_t *d)

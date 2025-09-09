@@ -6,6 +6,7 @@
 
 int __should_initialize_the_context_properly(void);
 int __should_be_able_to_define_a_directive_in_the_context(void);
+int __should_be_able_to_undefine_a_directive_in_the_context(void);
 int __should_be_able_to_find_a_directive_in_the_context(void);
 int __should_be_able_to_list_all_tokens_of_an_input(void);
 
@@ -34,6 +35,7 @@ int main(void)
 	int err = 0;
 	err = err || __should_initialize_the_context_properly();
 	err = err || __should_be_able_to_define_a_directive_in_the_context();
+	err = err || __should_be_able_to_undefine_a_directive_in_the_context();
 	err = err || __should_be_able_to_find_a_directive_in_the_context();
 	err = err || __should_be_able_to_list_all_tokens_of_an_input();
 	err = err || __should_be_able_to_tokenize_a_string();
@@ -128,6 +130,44 @@ int __should_be_able_to_define_a_directive_in_the_context(void)
 
 	SUCCESS;
 	#undef casename
+}
+
+int __should_be_able_to_undefine_a_directive_in_the_context(void)
+{
+    #define casename "should_be_able_to_undefine_a_directive_in_the_context"
+    START_CASE;
+
+    typex_context_t ctx;
+    int err = typex_new_ctx(&ctx, "#define x 1\n#undef x");
+    ASSERT_EQ(err, 0, "should initialize a context with no errors");
+
+	typex_directive_define_t d = {
+		.name_begin = 8,
+		.name_end   = 9,
+
+		.replacement_begin = 10,
+		.replacement_end   = 11,
+	};
+
+	err = typex_define_replacement(&ctx, &d);
+	ASSERT_EQ(err, 0, "should define a replacement macro in the context");
+
+	ASSERT_EQ(ctx.definitions_len, 1, "should define a replacement macro in the context");
+
+	typex_directive_undefine_t u = {
+		.name_begin = 8,
+		.name_end   = 9,
+	};
+
+	err = typex_undefine_replacement(&ctx, &u);
+	ASSERT_EQ(err, 0, "should be able to undefine a replacement in the context");
+
+	typex_directive_define_t d_new;
+	err = typex_define_replacement_lookup(&ctx, 8, 9, &d_new);
+	ASSERT_EQ(err, E_KEYNOTFOUND, "it cant find a directive if none is in the list");
+
+    SUCCESS;
+    #undef casename
 }
 
 int __should_be_able_to_find_a_directive_in_the_context(void)
