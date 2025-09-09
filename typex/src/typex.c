@@ -40,6 +40,7 @@ static const directive_pair_t __directives[__N_DIRECTIVES] = {
 
 static const char *__directives_str[__N_DIRECTIVES] = {
 	"define",
+	"undef",
 };
 
 int owned_str_append(owned_str_t *, owned_str_t *);
@@ -381,7 +382,6 @@ static directive_type_t __figure_out_directive(const char *stream, size_t linebe
 		}
 		else
 		{
-			if (i == 0) break;
 			high = i-1;
 		}
 	}
