@@ -28,6 +28,7 @@ typedef enum
 {
     TYPEX_TOKEN_TYPE_WORD,
     TYPEX_TOKEN_TYPE_MACRO,
+    TYPEX_TOKEN_TYPE_WHITESPACE,
     TYPEX_TOKEN_TYPE_EOF,
 } typex_token_type_t;
 

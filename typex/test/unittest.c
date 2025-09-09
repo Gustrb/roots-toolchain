@@ -196,17 +196,25 @@ int __should_be_able_to_list_all_tokens_of_an_input(void)
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
         { .begin = 1, .end = 7, .t = TYPEX_TOKEN_TYPE_MACRO },
+        { .begin = 7, .end = 8, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 8, .end = 9, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 9, .end = 10, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 10, .end = 11, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 11, .end = 12, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 12, .end = 15, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 15, .end = 16, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 16, .end = 20, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 20, .end = 21, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 21, .end = 25, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 25, .end = 26, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 26, .end = 27, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 27, .end = 28, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 28, .end = 29, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 29, .end = 35, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 35, .end = 36, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 36, .end = 37, .t = TYPEX_TOKEN_TYPE_WORD },
         { .begin = 37, .end = 38, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 38, .end = 39, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 39, .end = 40, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
@@ -318,7 +326,9 @@ int __should_be_able_to_tokenize_an_integer(void)
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
         { .begin = 0, .end = 1, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 1, .end = 2, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 2, .end = 4, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 4, .end = 5, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 5, .end = 7, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
@@ -344,7 +354,9 @@ int __should_be_able_to_tokenize_a_float(void)
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
         { .begin = 0, .end = 3, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 3, .end = 4, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 4, .end = 10, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 10, .end = 11, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 11, .end = 14, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
@@ -370,6 +382,7 @@ int __should_be_able_to_support_binary(void)
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
         { .begin = 0, .end = 6, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 6, .end = 7, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 7, .end = 13, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
@@ -395,6 +408,7 @@ int __should_be_able_to_support_octal(void)
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
         { .begin = 0, .end = 4, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 4, .end = 5, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 5, .end = 9, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
@@ -420,6 +434,7 @@ int __should_be_able_to_support_hexadecimal(void)
     typex_lexer_t l = {.len=len, .pos=0, .stream=program};
     typex_token_t expected_tokens[] = {
         { .begin = 0, .end = 5, .t = TYPEX_TOKEN_TYPE_WORD },
+        { .begin = 5, .end = 6, .t = TYPEX_TOKEN_TYPE_WHITESPACE },
         { .begin = 6, .end = 11, .t = TYPEX_TOKEN_TYPE_WORD },
     };
 
@@ -462,11 +477,14 @@ int __should_be_able_to_do_a_first_pass(void)
 
 int __should_be_able_to_allocate_the_correct_size_for_the_output(void)
 {
-    #define casename "should_be_able_to_do_a_first_pass"
+    #define casename "should_be_able_to_allocate_the_correct_size_for_the_output"
     START_CASE;
 
-    const char *program = "#define a 1\nint main(void)\n{\nreturn a;\n}";
+    const char *program = "#define a 1\nint main(void)\n{\n\treturn a;\n}";
     size_t len = strlen(program);
+
+    const char *expected_program = "int main(void)\n{\n\treturn 1;\n}";
+    size_t expected_len = strlen(expected_program);
 
 	typex_context_t ctx;
 	int err = typex_new_ctx(&ctx, "");
@@ -475,9 +493,11 @@ int __should_be_able_to_allocate_the_correct_size_for_the_output(void)
 	owned_str_t out;
     err = typex_preprocess(program, len, &out);
     ASSERT_EQ(err, 0, "should not fail to do a first pass on a valid program");
-
-    size_t total_len = 23;
-    ASSERT_EQ(total_len, out.len, "the preprocessor should allocate the correct size");
+    ASSERT_EQ(expected_len, out.len, "the preprocessor should allocate the correct size");
+    for (size_t i = 0; i < out.len; i++)
+    {
+        ASSERT_EQ(expected_program[i], out.buff[i], "the preprocessed program should match the expected program");
+    }
 
     free(out.buff);
 

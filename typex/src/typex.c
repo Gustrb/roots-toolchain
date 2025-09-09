@@ -44,6 +44,7 @@ int owned_str_append(owned_str_t *, owned_str_t *);
 
 int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ctx);
 int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_ctx, owned_str_t *out);
+int __typex_consume_define(typex_lexer_t *);
 int __typex_define_macro(typex_lexer_t *, typex_context_t *ctx);
 
 static unsigned long long __hash(const char *, size_t, size_t);
@@ -99,6 +100,10 @@ int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ct
             continue;
         }
 
+        if (tok.t == TYPEX_TOKEN_TYPE_WHITESPACE)
+        {
+            continue;
+        }
 
         if (tok.t == TYPEX_TOKEN_TYPE_MACRO)
         {
@@ -141,17 +146,27 @@ int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_c
             {
                 case DIRECTIVE_DEFINE:
                 {
-                    int e = typex_lexer_next_token(&l, &t);
-                    if (e != 0) return e;
-
-                    e = typex_lexer_next_token(&l, &t);
-                    if (e != 0) return e;
-
-                }; break;
+                    if ((err = __typex_consume_define(&l)) != 0)
+                    {
+                        return err;
+                    }
+               }; break;
                 case DIRECTIVE_ERROR:
                 {
                     return E_INVALIDMACRODIRECTIVE;
                 }; break;
+            }
+
+            continue;
+        }
+
+        if (t.t == TYPEX_TOKEN_TYPE_WHITESPACE)
+        {
+            owned_str_t ws = { .len = t.end - t.begin, .buff = (char *) stream + t.begin };
+            err = owned_str_append(out, &ws);
+            if (err)
+            {
+                return err;
             }
 
             continue;
@@ -192,6 +207,60 @@ int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_c
     return 0;
 }
 
+// skips the whole define directive, from the directive, to the last whitespace
+int __typex_consume_define(typex_lexer_t *l)
+{
+    typex_token_t tok;
+    int err = typex_lexer_next_token(l, &tok);
+    if (err)
+    {
+        return err;
+    }
+
+    while (tok.t != TYPEX_TOKEN_TYPE_WORD)
+    {
+        if (tok.t == TYPEX_TOKEN_TYPE_EOF)
+        {
+            return E_TYPEX_ERR_UNEXPECTED_EOF;
+        }
+
+        err = typex_lexer_next_token(l, &tok);
+        if (err)
+        {
+            return err;
+        }
+    }
+
+    if (tok.t == TYPEX_TOKEN_TYPE_WORD)
+    {
+        err = typex_lexer_next_token(l, &tok);
+        if (err)
+        {
+            return err;
+        }
+    }
+
+    while (tok.t == TYPEX_TOKEN_TYPE_WHITESPACE)
+    {
+        err = typex_lexer_next_token(l, &tok);
+        if (err)
+        {
+            return err;
+        }
+    }
+
+    if (tok.t == TYPEX_TOKEN_TYPE_WORD)
+    {
+        err = typex_lexer_next_token(l, &tok);
+        if (err)
+        {
+            return err;
+        }
+    }
+
+    return 0;
+}
+
 int owned_str_append(owned_str_t *dst, owned_str_t *src)
 {
     size_t new_len = dst->len + src->len;
@@ -219,19 +288,30 @@ int __typex_define_macro(typex_lexer_t *l, typex_context_t *ctx)
 
     // We need to get the macro name, it is the next token
     typex_token_t t;
-    int err = typex_lexer_next_token(l, &t);
-    if (err)
+    int err;
+
+    while (t.t != TYPEX_TOKEN_TYPE_WORD)
     {
-        return err;
+        err = typex_lexer_next_token(l, &t);
+        if (err)
+        {
+            return err;
+        }
     }
 
     d.name_begin = t.begin;
     d.name_end = t.end;
 
-    err = typex_lexer_next_token(l, &t);
-    if (err)
+    t.t = TYPEX_TOKEN_TYPE_EOF;
+
+
+    while (t.t != TYPEX_TOKEN_TYPE_WORD)
     {
-        return err;
+        err = typex_lexer_next_token(l, &t);
+        if (err)
+        {
+            return err;
+        }
     }
 
     d.replacement_begin = t.begin;
@@ -442,7 +522,11 @@ int typex_lexer_next_token(typex_lexer_t *lexer, typex_token_t *token)
                 {
                     case ' ': case '\t': case '\r': case '\n':
                     {
-                        ++lexer->pos;
+
+                        token->begin = lexer->pos;
+                        token->end = ++lexer->pos;
+                        token->t = TYPEX_TOKEN_TYPE_WHITESPACE;
+                        return 0;
                     }; break;
 
                     case '"':
