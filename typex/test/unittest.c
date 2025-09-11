@@ -26,6 +26,7 @@ int __should_be_able_to_tokenize_a_float(void);
 
 int __should_be_able_to_do_a_first_pass(void);
 int __should_be_able_to_allocate_the_correct_size_for_the_output(void);
+int __should_be_able_to_define_and_undefine_a_directive_in_the_context(void);
 
 int main(void)
 {
@@ -49,6 +50,7 @@ int main(void)
 	err = err || __should_be_able_to_tokenize_a_float();
 	err = err || __should_be_able_to_do_a_first_pass();
 	err = err || __should_be_able_to_allocate_the_correct_size_for_the_output();
+	err = err || __should_be_able_to_define_and_undefine_a_directive_in_the_context();
 
 	if (!err)
 	{
@@ -524,6 +526,36 @@ int __should_be_able_to_allocate_the_correct_size_for_the_output(void)
     size_t len = strlen(program);
 
     const char *expected_program = "int main(void)\n{\n\treturn 1;\n}";
+    size_t expected_len = strlen(expected_program);
+
+	typex_context_t ctx;
+	int err = typex_new_ctx(&ctx, "");
+	ASSERT_EQ(err, 0, "should initialize a context with no errors");
+
+	owned_str_t out;
+    err = typex_preprocess(program, len, &out);
+    ASSERT_EQ(err, 0, "should not fail to do a first pass on a valid program");
+    ASSERT_EQ(expected_len, out.len, "the preprocessor should allocate the correct size");
+    for (size_t i = 0; i < out.len; i++)
+    {
+        ASSERT_EQ(expected_program[i], out.buff[i], "the preprocessed program should match the expected program");
+    }
+
+    free(out.buff);
+
+    SUCCESS;
+    #undef casename
+}
+
+int __should_be_able_to_define_and_undefine_a_directive_in_the_context(void)
+{
+    #define casename "should_be_able_to_define_and_undefine_a_directive_in_the_context"
+    START_CASE;
+
+    const char *program = "#define a 1\n#undef a\nint main(void)\n{\n\treturn a;\n}";
+    size_t len = strlen(program);
+
+    const char *expected_program = "int main(void)\n{\n\treturn a;\n}";
     size_t expected_len = strlen(expected_program);
 
 	typex_context_t ctx;

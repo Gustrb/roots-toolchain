@@ -116,6 +116,7 @@ int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ct
         {
             // We need to figure out which directive this is...
             directive_type_t dirt = __figure_out_directive(stream, tok.begin, tok.end);
+
             switch (dirt)
             {
                 case DIRECTIVE_ERROR:
@@ -124,11 +125,17 @@ int typex_first_pass(const char *stream, size_t in_len, typex_context_t *root_ct
                 }; break;
                 case DIRECTIVE_DEFINE:
                 {
-                    return __typex_define_macro(&l, root_ctx);
+                    if ((err = __typex_define_macro(&l, root_ctx)) != 0)
+                    {
+                        return err;
+                    }
                 }; break;
                 case DIRECTIVE_UNDEFINE:
                 {
-                    return __typex_undefine_macro(&l, root_ctx);
+                    if ((err = __typex_undefine_macro(&l, root_ctx)) != 0)
+                    {
+                        return err;
+                    }
                 }; break;
             }
         }
@@ -152,7 +159,6 @@ int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_c
         if (t.t == TYPEX_TOKEN_TYPE_MACRO)
         {
             directive_type_t dir = __figure_out_directive(stream, t.begin, t.end);
-
             switch (dir)
             {
                 case DIRECTIVE_DEFINE:
@@ -228,60 +234,37 @@ int typex_second_pass(const char *stream, size_t in_len, typex_context_t *root_c
 // skips the whole define directive, from the directive, to the last whitespace
 int __typex_consume_define(typex_lexer_t *l)
 {
-    typex_token_t tok;
-    int err = typex_lexer_next_token(l, &tok);
-    if (err)
+    // We need to consume tokens until we hit a newline character.
+    // The newline character might be part of a TYPEX_TOKEN_TYPE_WHITESPACE token,
+    // or it might be the start of one.
+    while (l->pos < l->len)
     {
-        return err;
+        char current_char = l->stream[l->pos];
+        if (current_char == '\n')
+        {
+            l->pos++; // Consume the newline character itself
+            return 0;
+        }
+        l->pos++; // Advance the lexer position
     }
 
-    while (tok.t != TYPEX_TOKEN_TYPE_WORD)
-    {
-        if (tok.t == TYPEX_TOKEN_TYPE_EOF)
-        {
-            return E_TYPEX_ERR_UNEXPECTED_EOF;
-        }
-
-        err = typex_lexer_next_token(l, &tok);
-        if (err)
-        {
-            return err;
-        }
-    }
-
-    if (tok.t == TYPEX_TOKEN_TYPE_WORD)
-    {
-        err = typex_lexer_next_token(l, &tok);
-        if (err)
-        {
-            return err;
-        }
-    }
-
-    while (tok.t == TYPEX_TOKEN_TYPE_WHITESPACE)
-    {
-        err = typex_lexer_next_token(l, &tok);
-        if (err)
-        {
-            return err;
-        }
-    }
-
-    if (tok.t == TYPEX_TOKEN_TYPE_WORD)
-    {
-        err = typex_lexer_next_token(l, &tok);
-        if (err)
-        {
-            return err;
-        }
-    }
-
+    // If we reach EOF without a newline, that's also considered consumed
     return 0;
 }
 
 int __typex_consume_undefine(typex_lexer_t *l)
 {
-    (void)l;
+    while (l->pos < l->len)
+    {
+        char current_char = l->stream[l->pos];
+        if (current_char == '\n')
+        {
+            l->pos++; // Consume the newline character itself
+            return 0;
+        }
+        l->pos++; // Advance the lexer position
+    }
+
     return 0;
 }
 
@@ -328,7 +311,6 @@ int __typex_define_macro(typex_lexer_t *l, typex_context_t *ctx)
 
     t.t = TYPEX_TOKEN_TYPE_EOF;
 
-
     while (t.t != TYPEX_TOKEN_TYPE_WORD)
     {
         err = typex_lexer_next_token(l, &t);
@@ -346,9 +328,40 @@ int __typex_define_macro(typex_lexer_t *l, typex_context_t *ctx)
 
 int __typex_undefine_macro(typex_lexer_t *l, typex_context_t *ctx)
 {
-    (void)l;
-    (void)ctx;
+    typex_directive_undefine_t d;
 
+    typex_token_t t = {.t = TYPEX_TOKEN_TYPE_EOF};
+    int err;
+
+    while (t.t != TYPEX_TOKEN_TYPE_WORD)
+    {
+        err = typex_lexer_next_token(l, &t);
+        if (err)
+        {
+            return err;
+        }
+    }
+    d.name_begin = t.begin;
+    d.name_end = t.end;
+
+    // Step 2: Perform the undefine operation in the context
+    err = typex_undefine_replacement(ctx, &d);
+    if (err) {
+        return err; // Propagate any errors from undefining
+    }
+
+    // Step 3: Consume the rest of the line (up to and including the newline)
+    // This is crucial for the lexer's state for the rest of the file
+    while (l->pos < l->len)
+    {
+        char current_char = l->stream[l->pos];
+        if (current_char == '\n')
+        {
+            l->pos++; // Consume the newline character itself
+            return 0; // Directive line fully consumed
+        }
+        l->pos++; // Advance the lexer position
+    }
     return 0;
 }
 
@@ -448,40 +461,57 @@ int typex_define_replacement(typex_context_t *ctx, typex_directive_define_t *d)
 int typex_undefine_replacement(typex_context_t *ctx, typex_directive_undefine_t *u)
 {
     unsigned long long h = __hash(ctx->stream, u->name_begin, u->name_end);
-	size_t bucket_idx = (size_t)h % __TYPEX_TABLE_SIZE;
+    size_t bucket_idx = (size_t)h % __TYPEX_TABLE_SIZE;
 
-	if (ctx->buckets[bucket_idx] == -1)
-	{
-		return E_KEYNOTFOUND;
-	}
+    int current_def_idx = ctx->buckets[bucket_idx];
+    int target_def_idx = -1;
 
-	typex_directive_define_t *aux = &ctx->definitions[ctx->buckets[bucket_idx]];
-	while (!__str_eql(ctx->stream + aux->name_begin, ctx->stream + aux->name_end, ctx->stream + u->name_begin, ctx->stream + u->name_end))
-	{
-		if (aux->next == -1)
-		{
-			return E_KEYNOTFOUND;
-		}
+    // Iterate through the linked list in the bucket to find the definition
+    while (current_def_idx != -1)
+    {
+        typex_directive_define_t *current_def = &ctx->definitions[current_def_idx];
 
-		aux = &ctx->definitions[aux->next];
-	}
+        if (__str_eql(ctx->stream + current_def->name_begin, ctx->stream + current_def->name_end,
+                      ctx->stream + u->name_begin, ctx->stream + u->name_end))
+        {
+            target_def_idx = current_def_idx;
+            break; // Found the definition to undefine
+        }
+        current_def_idx = current_def->next;
+    }
 
-	if (aux->prev == -1)
-	{
-		ctx->buckets[bucket_idx] = aux->next;
-	}
-	else
-	{
-		ctx->definitions[aux->prev].next = aux->next;
-	}
+    if (target_def_idx == -1)
+    {
+        return E_KEYNOTFOUND; // Macro not found in this bucket or at all
+    }
 
-	aux->next = -1;
-	aux->prev = -1;
-	ctx->definitions_len--;
+    // Now, `target_def_idx` holds the index of the definition to remove.
+    typex_directive_define_t *to_remove = &ctx->definitions[target_def_idx];
+
+    // Update the 'next' pointer of the previous element or the bucket head
+    if (to_remove->prev == -1) // This is the first element in the bucket's list
+    {
+        ctx->buckets[bucket_idx] = to_remove->next;
+    }
+    else // It has a previous element
+    {
+        ctx->definitions[to_remove->prev].next = to_remove->next;
+    }
+
+    // Update the 'prev' pointer of the next element (if it exists)
+    if (to_remove->next != -1)
+    {
+        ctx->definitions[to_remove->next].prev = to_remove->prev;
+    }
+
+    // Optional: Reset prev/next of the removed element (good practice)
+    to_remove->prev = -1;
+    to_remove->next = -1;
+
+    ctx->definitions_len--; // Decrement the count of active definitions
 
     return 0;
 }
-
 int typex_define_replacement_lookup(typex_context_t *ctx, size_t name_begin, size_t name_end, typex_directive_define_t *d)
 {
 	unsigned long long h = __hash(ctx->stream, name_begin, name_end);
