@@ -84,6 +84,24 @@ void mishkin_context_free(mishkin_allocation_context_t *context)
     context->num_arenas = 0;
 }
 
+void mishkin_arena_reset(mishkin_allocation_context_t *context)
+{
+    if (!context)
+    {
+        return;
+    }
+
+    for (size_t curr = 0; curr < context->num_arenas; curr++)
+    {
+        mishkin_arena_t *arena = &context->arenas[curr];
+
+        if (arena->bytes != NULL)
+        {
+            arena->s = 0;
+        }
+    }
+}
+
 int mishkin_init_context(mishkin_allocation_context_t *context)
 {
     if (!context)
