@@ -24,5 +24,6 @@ typedef struct {
 int mishkin_init_context(mishkin_allocation_context_t *context);
 void *mishkin_arena_alloc(mishkin_allocation_context_t *context, size_t size);
 void mishkin_context_free(mishkin_allocation_context_t *context);
+void mishkin_arena_reset(mishkin_allocation_context_t *context);
 
 #endif
