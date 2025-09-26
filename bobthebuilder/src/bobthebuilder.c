@@ -59,6 +59,8 @@ typedef struct {
     char *linkwith[__MAX_LINKWITH_COUNT];
     size_t linkwith_count;
 
+    char debug;
+
     union {
         struct {
             char *library_path;
@@ -343,6 +345,21 @@ int __parse_buildfile(bobthebuilder_buildfile_context_t *context, bobthebuilder_
             continue;
         }
 
+        if (strcmp(key, "debug") == 0)
+        {
+            if (strcmp(value, "true") == 0)
+            {
+                context->debug = 1;
+            }
+            else
+            {
+                context->debug = 0;
+            }
+
+            free(line_copy);
+            continue;
+        }
+
         free(line_copy);
     }
 
@@ -517,6 +534,11 @@ int bobthebuilder_build_library(bobthebuilder_cli_args_t *cli_args, bobthebuilde
         __C_APPEND(c, " ");
         __C_APPEND(c, context->linkwith[i]);
         __C_APPEND(c, " ");
+    }
+
+    if (context->debug)
+    {
+        __C_APPEND(c, " -DDEBUG ");
     }
 
     __C_APPEND(c, " -Wall ");
