@@ -1,0 +1,4 @@
+type=library
+output=dist/noisy.o
+headers=lib/noisy.h
+lib=src/noisy.c
