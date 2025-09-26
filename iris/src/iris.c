@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "../lib/iris.h"
-#include "../lib/log.h"
+#include "../lib/noisy.h"
 
 #define IS_ALPHABETIC(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) == '_')
 #define IS_NUMERIC(c) (c) >= '0' && (c) <= '9'
@@ -69,8 +69,15 @@ static const char *__keywords_str[__LEXER_NKEYWORDS] = {
 // we read from 0..len (non-inclusive) 
 int lexer_init(lexer_t *lexer, const char *str, size_t len)
 {
-	if (lexer == NULL) return E_INVALIDPARAM;
-	if (str == NULL)   return E_INVALIDPARAM;
+	if (lexer == NULL) {
+		noisy_log(LOG_LEVEL_ERROR, "lexer is NULL\n");
+		return E_INVALIDPARAM;
+	}
+
+	if (str == NULL) {
+		noisy_log(LOG_LEVEL_ERROR, "str is NULL\n");
+		return E_INVALIDPARAM;
+	}
 
 	lexer->data     = str;
 	lexer->data_len = len;
