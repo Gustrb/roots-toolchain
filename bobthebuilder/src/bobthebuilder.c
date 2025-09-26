@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #define __PATH_BUFF_MAX 4096
 #define __MAX_HEADERS_COUNT 1024
+#define __COMMAND_BUFFER_SIZE 4096
 
 #define E_NOTENOUGHARGS    1
 #define E_PATHTOOLONG      2
@@ -16,6 +18,9 @@
 #define E_OUTOFMEM 8
 #define E_FAILTOREAD 9
 #define E_INVALIDBUILDTYPE 10
+#define E_BUFFEROVERFLOW 11 
+#define E_FAILTORUNCOMMAND 12
+#define E_FAILTOCREATEFOLDER 13
 
 typedef struct {
     char *buff;
@@ -57,6 +62,12 @@ typedef struct {
     } as;
 } bobthebuilder_buildfile_context_t;
 
+typedef struct
+{
+	char buff[__COMMAND_BUFFER_SIZE];
+	size_t last;
+} command_t;
+
 static const char *__error_messages[] = {
     [E_NOTENOUGHARGS] = "Not enough arguments provided",
     [E_PATHTOOLONG] = "Path too long",
@@ -68,13 +79,22 @@ static const char *__error_messages[] = {
     [E_OUTOFMEM] = "Out of memory",
     [E_FAILTOREAD] = "Failed to read buildfile",
     [E_INVALIDBUILDTYPE] = "Invalid build type",
+    [E_BUFFEROVERFLOW] = "Buffer overflow",
+    [E_FAILTORUNCOMMAND] = "Failed to run command",
+    [E_FAILTOCREATEFOLDER] = "Failed to create folder",
 };
 
 int cli_parse(int argc, char **argv, bobthebuilder_cli_args_t *args);
 int __figure_out_buildfile(bobthebuilder_cli_args_t *args, bobthebuilder_buildfile_t *buildfile);
 int __parse_buildfile(bobthebuilder_buildfile_context_t *context, bobthebuilder_buildfile_t *buildfile);
 int __file_into_memory(const char *filepath, io_string_t *iostr);
+
 int bobthebuilder_cleanup(bobthebuilder_buildfile_context_t *context, bobthebuilder_buildfile_t *buildfile);
+int bobthebuilder_build(bobthebuilder_cli_args_t *cli_args, bobthebuilder_buildfile_context_t *context);
+int bobthebuilder_build_library(bobthebuilder_cli_args_t *cli_args, bobthebuilder_buildfile_context_t *context);
+
+static int command_append_arg(command_t *c, const char *arg);
+static int command_run(command_t *c); 
 
 int main(int argc, char **argv)
 {
@@ -111,6 +131,12 @@ int main(int argc, char **argv)
     }
     printf("Library path: %s\n", context.as.library.library_path);
 #endif
+
+    if ((err = bobthebuilder_build(&cli, &context)))
+    {
+        fprintf(stderr, "[ERROR]: %s\n", __error_messages[err]);
+        return err;
+    }
 
     bobthebuilder_cleanup(&context, &buildfile);
     return 0;
@@ -314,3 +340,108 @@ int bobthebuilder_cleanup(bobthebuilder_buildfile_context_t *context, bobthebuil
 
     return 0;
 }
+
+int bobthebuilder_build(bobthebuilder_cli_args_t *cli_args, bobthebuilder_buildfile_context_t *context)
+{
+    switch (context->t)
+    {
+        case BOBTHEBUILDER_BUILD_TYPE_LIBRARY: return bobthebuilder_build_library(cli_args, context);
+
+        default:
+            fprintf(stderr, "[ERROR]: Not implemented yet\n");
+            return E_INVALIDBUILDTYPE;
+    }
+}
+
+static const char *compiler = "cc ";
+
+#define __C_APPEND(c, str) \
+	do \
+		if ((err = command_append_arg(&c, str))) return err;\
+	while (0);
+
+
+int bobthebuilder_build_library(bobthebuilder_cli_args_t *cli_args, bobthebuilder_buildfile_context_t *context)
+{
+    // Here we are hardcoding the output folder to be dist/
+    // that probably should not be the case, but it is what it is for now.
+    char output_folder[__PATH_BUFF_MAX];
+    if (snprintf(output_folder, __PATH_BUFF_MAX, "%s/dist", cli_args->inputfolder) < 0)
+    {
+        return E_FAILTOFORMATPATH;
+    }
+
+    struct stat st = {0};
+    if (stat(output_folder, &st) == -1)
+    {
+        if (mkdir(output_folder, 0700))
+        {
+            return E_FAILTOCREATEFOLDER;
+        }
+    }
+
+	int err;
+	command_t c = {0};
+
+	__C_APPEND(c, compiler);
+    __C_APPEND(c, " -c ");
+    __C_APPEND(c, " ");
+
+	__C_APPEND(c, cli_args->inputfolder);
+    __C_APPEND(c, "/");
+	__C_APPEND(c, context->as.library.library_path);
+
+	__C_APPEND(c, " -o ");
+
+	__C_APPEND(c, cli_args->inputfolder);
+    __C_APPEND(c, "/");
+	__C_APPEND(c, context->outputpath);
+
+   __C_APPEND(c, " -Wall ");
+	__C_APPEND(c, "-Wextra ");
+	__C_APPEND(c, "-Werror ");
+	__C_APPEND(c, "-pedantic ");
+	
+    if ((err = command_run(&c)))
+    {
+        return err;
+    }
+
+    return 0;
+}
+
+static int command_append_arg(command_t *c, const char *arg)
+{
+	size_t len = strlen(arg);
+	// We want to keep the invariant of
+	// c->last < __COMMAND_BUFFER_SIZE - 1
+	// Because that is where we are going to put the null byte
+	if (c->last + len > __COMMAND_BUFFER_SIZE-1)
+	{
+		return E_BUFFEROVERFLOW;
+	}
+
+	for (size_t i = 0; i < len; ++i)
+	{
+		c->buff[c->last++] = arg[i];
+	}
+
+	return 0;
+}
+
+static int command_run(command_t *c)
+{
+	if (c->last > __COMMAND_BUFFER_SIZE)
+	{
+		return E_BUFFEROVERFLOW;
+	}
+
+	c->buff[c->last] = '\0';
+	int err = system(c->buff);
+	if (err != 0)
+	{
+		return E_FAILTORUNCOMMAND;
+	}
+
+	return 0;
+} 
