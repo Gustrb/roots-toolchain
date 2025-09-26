@@ -3,3 +3,4 @@ output=dist/iris.o
 headers=lib/iris.h
 lib=src/iris.c
 dependencies=../libraries/noisy
+debug=false
