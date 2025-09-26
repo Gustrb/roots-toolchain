@@ -7,6 +7,7 @@
 #define __PATH_BUFF_MAX 4096
 #define __MAX_HEADERS_COUNT 1024
 #define __COMMAND_BUFFER_SIZE 4096
+#define __MAX_LINKWITH_COUNT 1024
 
 #define E_NOTENOUGHARGS    1
 #define E_PATHTOOLONG      2
@@ -52,6 +53,12 @@ typedef struct {
     char *headers[__MAX_HEADERS_COUNT];
     size_t headers_count;
 
+    char *dependencies[__MAX_LINKWITH_COUNT];
+    size_t dependencies_count;
+
+    char *linkwith[__MAX_LINKWITH_COUNT];
+    size_t linkwith_count;
+
     union {
         struct {
             char *library_path;
@@ -89,9 +96,15 @@ int __figure_out_buildfile(bobthebuilder_cli_args_t *args, bobthebuilder_buildfi
 int __parse_buildfile(bobthebuilder_buildfile_context_t *context, bobthebuilder_buildfile_t *buildfile);
 int __file_into_memory(const char *filepath, io_string_t *iostr);
 
-int bobthebuilder_cleanup(bobthebuilder_buildfile_context_t *context, bobthebuilder_buildfile_t *buildfile);
+int __bobthebuilder_cleanup_buildfile(bobthebuilder_buildfile_t *buildfile);
+int __bobthebuilder_cleanup_context(bobthebuilder_buildfile_context_t *context);
+
 int bobthebuilder_build(bobthebuilder_cli_args_t *cli_args, bobthebuilder_buildfile_context_t *context);
 int bobthebuilder_build_library(bobthebuilder_cli_args_t *cli_args, bobthebuilder_buildfile_context_t *context);
+
+int bobthebuilder_run(bobthebuilder_cli_args_t *cli_args, bobthebuilder_buildfile_context_t *context);
+
+int __copy_file(const char *src, const char *dst);
 
 static int command_append_arg(command_t *c, const char *arg);
 static int command_run(command_t *c); 
@@ -107,38 +120,66 @@ int main(int argc, char **argv)
         return err;
     }
 
-    bobthebuilder_buildfile_t buildfile;
-    if ((err = __figure_out_buildfile(&cli, &buildfile)))
+    bobthebuilder_buildfile_context_t context = {0};
+    if ((err = bobthebuilder_run(&cli, &context)))
     {
         fprintf(stderr, "[ERROR]: %s\n", __error_messages[err]);
         return err;
     }
 
-    bobthebuilder_buildfile_context_t context = {0};
-    if ((err = __parse_buildfile(&context, &buildfile)))
+    __bobthebuilder_cleanup_context(&context);
+
+    return 0;
+}
+
+int bobthebuilder_run(bobthebuilder_cli_args_t *cli, bobthebuilder_buildfile_context_t *context)
+{
+    int err;
+    bobthebuilder_buildfile_t buildfile;
+    if ((err = __figure_out_buildfile(cli, &buildfile)))
+    {
+        fprintf(stderr, "[ERROR]: %s\n", __error_messages[err]);
+        return err;
+    }
+
+    if ((err = __parse_buildfile(context, &buildfile)))
     {
         fprintf(stderr, "[ERROR]: %s\n", __error_messages[err]);
         return err;
     }
 
 #ifdef DEBUG
-    printf("Build type: %d\n", context.t);
-    printf("Output path: %s\n", context.outputpath);
-    printf("Headers count: %zu\n", context.headers_count);
-    for (size_t i = 0; i < context.headers_count; i++)
+    printf("Build type: %d\n", context->t);
+    printf("Output path: %s\n", context->outputpath);
+    printf("Headers count: %zu\n", context->headers_count);
+    for (size_t i = 0; i < context->headers_count; i++)
     {
-        printf("Header %zu: %s\n", i, context.headers[i]);
+        printf("Header %zu: %s\n", i, context->headers[i]);
     }
-    printf("Library path: %s\n", context.as.library.library_path);
+
+    printf("Dependencies count: %zu\n", context->dependencies_count);
+    for (size_t i = 0; i < context->dependencies_count; i++)
+    {
+        printf("Dependency %zu: %s\n", i, context->dependencies[i]);
+    }
+
+    printf("Linkwith count: %zu\n", context->linkwith_count);
+    for (size_t i = 0; i < context->linkwith_count; i++)
+    {
+        printf("Linkwith %zu: %s\n", i, context->linkwith[i]);
+    }
+
+    printf("Library path: %s\n", context->as.library.library_path);
 #endif
 
-    if ((err = bobthebuilder_build(&cli, &context)))
+    if ((err = bobthebuilder_build(cli, context)))
     {
         fprintf(stderr, "[ERROR]: %s\n", __error_messages[err]);
         return err;
     }
 
-    bobthebuilder_cleanup(&context, &buildfile);
+    __bobthebuilder_cleanup_buildfile(&buildfile);
+
     return 0;
 }
 
@@ -276,6 +317,32 @@ int __parse_buildfile(bobthebuilder_buildfile_context_t *context, bobthebuilder_
             continue;
         }
 
+        if (strcmp(key, "dependencies") == 0)
+        {
+            if (context->dependencies_count >= __MAX_LINKWITH_COUNT)
+            {
+                return E_OUTOFMEM;
+            }
+
+            context->dependencies_count++;
+            context->dependencies[context->dependencies_count - 1] = strdup(value);
+            free(line_copy);
+            continue;
+        }
+
+        if (strcmp(key, "linkwith") == 0)
+        {
+            if (context->linkwith_count >= __MAX_LINKWITH_COUNT)
+            {
+                return E_OUTOFMEM;
+            }
+
+            context->linkwith_count++;
+            context->linkwith[context->linkwith_count - 1] = strdup(value);
+            free(line_copy);
+            continue;
+        }
+
         free(line_copy);
     }
 
@@ -325,10 +392,15 @@ int __file_into_memory(const char *filepath, io_string_t *iostr)
 	return 0;
 }
 
-int bobthebuilder_cleanup(bobthebuilder_buildfile_context_t *context, bobthebuilder_buildfile_t *buildfile)
+int __bobthebuilder_cleanup_buildfile(bobthebuilder_buildfile_t *buildfile)
 {
     free(buildfile->contents.buff);
 
+    return 0;
+}
+
+int __bobthebuilder_cleanup_context(bobthebuilder_buildfile_context_t *context)
+{
     if (context->t == BOBTHEBUILDER_BUILD_TYPE_LIBRARY)
     {
         for (size_t i = 0; i < context->headers_count; i++)
@@ -336,6 +408,16 @@ int bobthebuilder_cleanup(bobthebuilder_buildfile_context_t *context, bobthebuil
             free(context->headers[i]);
         }
         free(context->as.library.library_path);
+    }
+
+    for (size_t i = 0; i < context->dependencies_count; i++)
+    {
+        free(context->dependencies[i]);
+    }
+
+    for (size_t i = 0; i < context->linkwith_count; i++)
+    {
+        free(context->linkwith[i]);
     }
 
     return 0;
@@ -380,7 +462,40 @@ int bobthebuilder_build_library(bobthebuilder_cli_args_t *cli_args, bobthebuilde
         }
     }
 
-	int err;
+    int err;
+    for (size_t i = 0; i < context->dependencies_count; i++)
+    {
+        bobthebuilder_cli_args_t libcliargs = {0};
+        bobthebuilder_buildfile_context_t libcontext = {0};
+
+        libcliargs.inputfolder = context->dependencies[i];
+        libcliargs.inputfolder_len = strlen(libcliargs.inputfolder);
+
+        if ((err = bobthebuilder_run(&libcliargs, &libcontext)))
+        {
+            return err;
+        }
+
+        // We need to copy the headers from the library to the lib folder
+        for (size_t j = 0; j < libcontext.headers_count; j++)
+        {
+            // We need to get the headers list, copy them from the lib's folder into
+            // the current project's folder
+            char header_path[__PATH_BUFF_MAX];
+            snprintf(header_path, __PATH_BUFF_MAX, "%s/%s", libcliargs.inputfolder, libcontext.headers[j]);
+
+            char dst_header_path[__PATH_BUFF_MAX];
+            snprintf(dst_header_path, __PATH_BUFF_MAX, "%s/%s", cli_args->inputfolder, libcontext.headers[j]);
+
+            if ((err = __copy_file(header_path, dst_header_path)))
+            {
+                return err;
+            }
+        }
+
+        __bobthebuilder_cleanup_context(&libcontext);
+    }
+
 	command_t c = {0};
 
 	__C_APPEND(c, compiler);
@@ -397,7 +512,14 @@ int bobthebuilder_build_library(bobthebuilder_cli_args_t *cli_args, bobthebuilde
     __C_APPEND(c, "/");
 	__C_APPEND(c, context->outputpath);
 
-   __C_APPEND(c, " -Wall ");
+    for (size_t i = 0; i < context->linkwith_count; i++)
+    {
+        __C_APPEND(c, " ");
+        __C_APPEND(c, context->linkwith[i]);
+        __C_APPEND(c, " ");
+    }
+
+    __C_APPEND(c, " -Wall ");
 	__C_APPEND(c, "-Wextra ");
 	__C_APPEND(c, "-Werror ");
 	__C_APPEND(c, "-pedantic ");
@@ -437,6 +559,10 @@ static int command_run(command_t *c)
 	}
 
 	c->buff[c->last] = '\0';
+#ifdef DEBUG
+    printf("Running command: %s\n", c->buff);
+#endif
+
 	int err = system(c->buff);
 	if (err != 0)
 	{
@@ -445,3 +571,35 @@ static int command_run(command_t *c)
 
 	return 0;
 } 
+
+#define __BUFFER_SIZE 4096
+
+int __copy_file(const char *src, const char *dst)
+{
+#ifdef DEBUG
+    printf("Copying file from %s to %s\n", src, dst);
+#endif
+
+    FILE *src_file = fopen(src, "r");
+    if (!src_file)
+    {
+        return E_FAILTOOPENFILE;
+    }
+
+    FILE *dst_file = fopen(dst, "w");
+    if (!dst_file)
+    {
+        return E_FAILTOOPENFILE;
+    }
+
+    char buffer[__BUFFER_SIZE];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, __BUFFER_SIZE, src_file)) > 0)
+    {
+        fwrite(buffer, 1, bytes_read, dst_file);
+    }
+
+    fclose(src_file);
+    fclose(dst_file);
+    return 0;
+}
